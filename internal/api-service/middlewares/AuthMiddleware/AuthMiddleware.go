@@ -6,6 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/abhirajranjan/gochat/internal/api-service/model"
 	"github.com/abhirajranjan/gochat/internal/api-service/serviceErrors"
 	"github.com/abhirajranjan/gochat/pkg/logger"
 	jwt "github.com/appleboy/gin-jwt/v2"
@@ -14,12 +15,12 @@ import (
 
 type jwtAuth struct {
 	*jwt.GinJWTMiddleware
-	handler IHandler
+	handler model.IHandler
 	Logger  logger.ILogger
 	Cfg     AuthConf
 }
 
-func NewJWTMiddleware(cfg AuthConf, logger logger.ILogger, methodhandler IHandler) (*jwtAuth, error) {
+func NewJWTMiddleware(cfg AuthConf, logger logger.ILogger, methodhandler model.IHandler) (*jwtAuth, error) {
 	jwtauth := &jwtAuth{
 		Cfg:     cfg,
 		Logger:  logger,
@@ -85,7 +86,7 @@ func (j *jwtAuth) HTTPStatusMessageFunc(e error, c *gin.Context) string {
 }
 
 func (j *jwtAuth) payloadFunc(data interface{}) jwt.MapClaims {
-	if v, ok := data.(ILoginResponse); ok {
+	if v, ok := data.(model.ILoginResponse); ok {
 		return j.handler.GeneratePayloadData(v)
 	}
 	j.Logger.Error(serviceErrors.NewStandardErr("jwtAuth.payloadFunc", "cannot decode unmarshal into ILoginResponse", data))

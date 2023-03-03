@@ -1,25 +1,25 @@
 package grpcHandler
 
 import (
-	"github.com/abhirajranjan/gochat/internal/api-service/grpcServer"
+	"github.com/abhirajranjan/gochat/internal/api-service/model"
+	"github.com/abhirajranjan/gochat/internal/api-service/payload"
+	"github.com/abhirajranjan/gochat/internal/api-service/payload/mockParser"
 	"github.com/abhirajranjan/gochat/pkg/logger"
-	"github.com/gin-gonic/gin"
 )
 
-type IHandler interface {
-	HandleLoginRequest(ILoginRequest) (ILoginResponse, error)
-	GenerateLoginRequest(c *gin.Context) (ILoginRequest, error)
-	ExtractPayloadData(claims map[string]interface{}) IPayloadData
-}
-
 type grpcHandler struct {
-	logger logger.ILogger
-	grpc   grpcServer.IGrpcServer
+	logger         logger.ILogger
+	grpc           model.IGrpcServer
+	payloadManager model.IPayLoadManager
 }
 
-func NewGrpcHandler(logger logger.ILogger, grpcServer grpcServer.IGrpcServer) IHandler {
-	return &grpcHandler{
-		logger: logger,
-		grpc:   grpcServer,
+func NewGrpcHandler(logger logger.ILogger, grpcServer model.IGrpcServer) model.IHandler {
+	handler := &grpcHandler{
+		logger:         logger,
+		grpc:           grpcServer,
+		payloadManager: payload.NewManager(true),
 	}
+
+	handler.payloadManager.RegisterParser(mockParser.NewMockParser())
+	return handler
 }

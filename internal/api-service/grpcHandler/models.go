@@ -1,12 +1,6 @@
 package grpcHandler
 
-type ILoginRequest interface {
-	GetUsername() string
-	SetUsername(string)
-
-	GetPassword() string
-	SetPassword(string)
-}
+import "github.com/abhirajranjan/gochat/internal/api-service/model"
 
 type LoginRequest struct {
 	username string
@@ -29,19 +23,7 @@ func (l *LoginRequest) SetPassword(password string) {
 	l.password = password
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////////
-
-type ILoginResponse interface {
-	GetUserID() string
-	GetUserRoles() []int64
-	GetErr() error
-	GetErrCode() int64
-}
-
-type IPayloadData interface {
-	GetUserID() string
-	GetUserRoles() []int64
-}
+///////////////////////////////////////////////////////////////////////////////////////////////////
 
 type responseStatus struct {
 	err     error
@@ -70,7 +52,7 @@ func (l *loginResponse) GetErrCode() int64 {
 	return l.errCode
 }
 
-func NewLoginResponse(userID string, userRoles []int64, errCode int64, err error) ILoginResponse {
+func NewLoginResponse(userID string, userRoles []int64, errCode int64, err error) model.ILoginResponse {
 	return &loginResponse{
 		UserID:    userID,
 		UserRoles: userRoles,

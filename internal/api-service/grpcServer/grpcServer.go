@@ -5,15 +5,11 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/abhirajranjan/gochat/internal/api-service/model"
 	"github.com/abhirajranjan/gochat/internal/api-service/proto/loginService"
 	"github.com/abhirajranjan/gochat/pkg/logger"
 	"google.golang.org/grpc"
 )
-
-type IGrpcServer interface {
-	Run()
-	VerifyUser(ctx context.Context, loginreq *loginService.LoginRequest) (res *loginService.LoginResponse, err error)
-}
 
 type grpcServer struct {
 	loginService.UnimplementedLoginServiceServer
@@ -24,7 +20,7 @@ type grpcServer struct {
 	client loginService.LoginServiceClient
 }
 
-func NewGrpcServer(config GrpcConfig, logger logger.ILogger) IGrpcServer {
+func NewGrpcServer(config GrpcConfig, logger logger.ILogger) model.IGrpcServer {
 	return &grpcServer{
 		logger: logger,
 		config: config,
