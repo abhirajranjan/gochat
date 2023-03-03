@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+// login prototype for communication between apiService and LoginService
+
+package loginService;
+option go_package = "./;loginService";
+
+message LoginRequest {
+    string Username = 1;
+    string Password = 2;
+}
+
+message ResponseStatusType {
+    int64 errCode = 1;
+    string err = 2;
+}
+
+message UserType {
+    string UserID = 1;
+    repeated int64 UserRoles = 2;
+}
+
+message LoginResponse {
+    UserType User = 1;
+    ResponseStatusType Status = 2;
+}
+
+service loginService {
+    rpc VerifyUser(LoginRequest) returns (LoginResponse);
+}
