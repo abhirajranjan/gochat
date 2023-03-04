@@ -20,8 +20,8 @@ func (p *mockParser) SupportsVersion() int64 {
 	return 0
 }
 
-func (p *mockParser) To_Proto(data model.IPayloadData) interface{} {
-	return data
+func (p *mockParser) VerifyUser(data model.IPayloadData) bool {
+	return true
 }
 
 func (p *mockParser) Encode(i map[string]interface{}, inplace bool) (map[string]interface{}, error) {
@@ -31,4 +31,8 @@ func (p *mockParser) Encode(i map[string]interface{}, inplace bool) (map[string]
 func (p *mockParser) Decode(data map[string]interface{}) (model.IPayloadData, error) {
 	a := payloadData(data)
 	return &a, nil
+}
+
+func (p *mockParser) LogoutUser(map[string]interface{}) error {
+	return nil
 }

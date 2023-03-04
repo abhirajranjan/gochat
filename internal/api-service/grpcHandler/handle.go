@@ -7,6 +7,7 @@ import (
 	"github.com/abhirajranjan/gochat/internal/api-service/model"
 	"github.com/abhirajranjan/gochat/internal/api-service/serviceErrors"
 	"github.com/gin-gonic/gin"
+	"github.com/pkg/errors"
 )
 
 func (h *grpcHandler) HandleLoginRequest(modelLoginRequest model.ILoginRequest) (model.ILoginResponse, error) {
@@ -67,24 +68,33 @@ func (h *grpcHandler) GeneratePayloadData(modelLoginResponse model.ILoginRespons
 }
 
 func (h *grpcHandler) ExtractPayloadData(claims map[string]interface{}) model.IPayloadData {
-	version, ok := claims["ver"]
-	if !ok {
-		h.logger.Infof("[handler.ExtractPayloadData] %s %v", "jwt missing version", claims)
-		return nil
-	}
-	ver, ok := version.(int64)
-	if !ok {
-		h.logger.Infof("[handler.ExtractPayloadData] %s %v", "jwt has unknown type version", version)
-		return nil
-	}
-	data, err := h.payloadManager.Decode(claims, ver)
+	ver, err := GetVersionFromClaims(claims)
 	if err != nil {
-		h.logger.Infof("[handler.ExtractPayloadData] %s %s", "error decoding jwt data", err)
+		h.logger.Info(errors.Wrap(err, "handler.ExtractPayloadData"))
+		return nil
+	}
+
+	data, err := h.payloadManager.Decode(claims, ver)
+
+	if err != nil {
+		h.logger.Info(serviceErrors.NewStandardErr("handler.ExtractPayloadData", "error decoding jwt data", err))
 		return nil
 	}
 	return data
 }
 
-func (h *grpcHandler) VerifyPayloadData(data model.IPayloadData) {
-	h.payloadManager.To_Proto(data)
+func (h *grpcHandler) VerifyUser(data model.IPayloadData) bool {
+	return h.payloadManager.VerifyUser(data)
+}
+
+func (h *grpcHandler) LogoutUser(claims map[string]interface{}) int {
+	ver, err := GetVersionFromClaims(claims)
+	if err != nil {
+		h.logger.Info(errors.Wrap(err, "handler.LogoutUser"))
+		return http.StatusUnprocessableEntity
+	}
+	if !h.payloadManager.LogoutUser(claims, ver) {
+		return http.StatusInternalServerError
+	}
+	return http.StatusOK
 }

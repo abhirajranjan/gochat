@@ -93,23 +93,15 @@ func (j *jwtAuth) payloadFunc(data interface{}) jwt.MapClaims {
 	return jwt.MapClaims{}
 }
 
-func (j *jwtAuth) loginResponse(c *gin.Context, code int, token string, expire time.Time) {
-	j.Logger.Debug("login successfull, token:%s expiry:%v", token, expire)
-	c.JSON(http.StatusOK, gin.H{
-		"code":   http.StatusOK,
-		"token":  token,
-		"expire": expire.Format(time.RFC3339),
-	})
-}
-
 func (j *jwtAuth) identityHandler(c *gin.Context) interface{} {
 	claims := jwt.ExtractClaims(c)
-	return j.handler.ExtractPayloadData(claims)
+	var payload model.IPayloadData = j.handler.ExtractPayloadData(claims)
+	return payload
 }
 
 func (j *jwtAuth) authorizator(data interface{}, c *gin.Context) bool {
-
-	return false
+	payload := data.(model.IPayloadData)
+	return j.handler.VerifyUser(payload)
 }
 
 func (j *jwtAuth) refreshResponse(c *gin.Context, code int, token string, expire time.Time) {
@@ -121,8 +113,21 @@ func (j *jwtAuth) refreshResponse(c *gin.Context, code int, token string, expire
 	})
 }
 
-func (j *jwtAuth) LogoutResponse(c *gin.Context, code int) {
+func (j *jwtAuth) loginResponse(c *gin.Context, code int, token string, expire time.Time) {
+	j.Logger.Debug("login successfull, token:%s expiry:%v", token, expire)
+	c.JSON(http.StatusOK, gin.H{
+		"code":   http.StatusOK,
+		"token":  token,
+		"expire": expire.Format(time.RFC3339),
+	})
+}
 
+func (j *jwtAuth) LogoutResponse(c *gin.Context, code int) {
+	claims := jwt.ExtractClaims(c)
+	status := j.handler.LogoutUser(claims)
+	c.JSON(status, gin.H{
+		"code": status,
+	})
 }
 
 func (j *jwtAuth) unauthorized(c *gin.Context, code int, message string) {

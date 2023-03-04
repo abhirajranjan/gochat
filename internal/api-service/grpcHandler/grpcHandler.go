@@ -17,7 +17,7 @@ func NewGrpcHandler(logger logger.ILogger, grpcServer model.IGrpcServer) model.I
 	handler := &grpcHandler{
 		logger:         logger,
 		grpc:           grpcServer,
-		payloadManager: payload.NewManager(true),
+		payloadManager: payload.NewManager(logger, true),
 	}
 
 	handler.payloadManager.RegisterParser(mockParser.NewMockParser())

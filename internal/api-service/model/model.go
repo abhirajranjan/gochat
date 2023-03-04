@@ -26,16 +26,18 @@ type ILoginResponse interface {
 
 type IHandler interface {
 	HandleLoginRequest(ILoginRequest) (ILoginResponse, error)
-	GenerateLoginRequest(c *gin.Context) (ILoginRequest, error)
+	GenerateLoginRequest(*gin.Context) (ILoginRequest, error)
 	GeneratePayloadData(ILoginResponse) map[string]interface{}
-	ExtractPayloadData(claims map[string]interface{}) IPayloadData
+	ExtractPayloadData(map[string]interface{}) IPayloadData
+	VerifyUser(IPayloadData) bool
+	LogoutUser(map[string]interface{}) int
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 type IGrpcServer interface {
 	Run()
-	VerifyUser(ctx context.Context, loginreq *loginService.LoginRequest) (res *loginService.LoginResponse, err error)
+	VerifyUser(context.Context, *loginService.LoginRequest) (*loginService.LoginResponse, error)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -46,15 +48,18 @@ type IPayloadData interface {
 
 type IParser interface {
 	SupportsVersion() int64
+	// if inplace is true then add additional fields to input map else generate output map
 	Encode(map[string]interface{}, bool) (map[string]interface{}, error)
 	Decode(map[string]interface{}) (IPayloadData, error)
-	To_Proto(IPayloadData) interface{}
+	VerifyUser(IPayloadData) bool
+	LogoutUser(map[string]interface{}) error
 }
 
 type IPayLoadManager interface {
-	RegisterParser(parser IParser) error
-	Encode(data map[string]interface{}, version int64) (map[string]interface{}, error)
-	AddPayload(data map[string]interface{}) (map[string]interface{}, error)
-	Decode(data map[string]interface{}, version int64) (IPayloadData, error)
-	To_Proto(data IPayloadData) interface{}
+	RegisterParser(IParser) error
+	Encode(map[string]interface{}, int64) (map[string]interface{}, error)
+	AddPayload(map[string]interface{}) (map[string]interface{}, error)
+	Decode(map[string]interface{}, int64) (IPayloadData, error)
+	VerifyUser(IPayloadData) bool
+	LogoutUser(map[string]interface{}, int64) bool
 }

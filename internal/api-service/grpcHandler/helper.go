@@ -133,3 +133,16 @@ func _generateMap(val reflect.Value, out map[string]interface{}) {
 		out[name] = outval
 	}
 }
+
+func GetVersionFromClaims(claims map[string]interface{}) (int64, error) {
+	version, ok := claims["ver"]
+	if !ok {
+		return 0, serviceErrors.NewStandardErr("handler.GetVersionFromClaims", "jwt missing version", claims)
+
+	}
+	ver, ok := version.(int64)
+	if !ok {
+		return 0, serviceErrors.NewStandardErr("handler.ExtractPayloadData", "jwt has unknown type version", version)
+	}
+	return ver, nil
+}

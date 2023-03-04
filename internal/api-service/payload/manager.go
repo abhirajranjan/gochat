@@ -1,18 +1,22 @@
 package payload
 
 import (
-	"errors"
 	"sync"
 
+	"github.com/pkg/errors"
+
 	"github.com/abhirajranjan/gochat/internal/api-service/model"
+	"github.com/abhirajranjan/gochat/pkg/logger"
 )
 
 var (
 	ErrPluginAlreadyExist = errors.New("plugin with supported version already exist")
 	ErrNoParserFound      = errors.New("no parser found for given version")
+	ErrParser             = errors.New("parser failed to process request")
 )
 
 type Manager struct {
+	logger        logger.ILogger
 	mu            sync.RWMutex
 	parsers       map[int64]model.IParser
 	latestVersion int64
@@ -25,8 +29,8 @@ type Manager struct {
 	inplace bool
 }
 
-func NewManager(inplace bool) model.IPayLoadManager {
-	return &Manager{inplace: inplace}
+func NewManager(logger logger.ILogger, inplace bool) model.IPayLoadManager {
+	return &Manager{logger: logger, inplace: inplace}
 }
 
 func (m *Manager) RegisterParser(parser model.IParser) error {
@@ -76,10 +80,24 @@ func (m *Manager) Decode(data map[string]interface{}, version int64) (model.IPay
 	return parser.Decode(data)
 }
 
-func (m *Manager) To_Proto(data model.IPayloadData) interface{} {
+func (m *Manager) VerifyUser(data model.IPayloadData) bool {
 	parser := m.getParser(data.Version())
 	if parser == nil {
-		return nil
+		return false
 	}
-	return parser.To_Proto(data)
+	return parser.VerifyUser(data)
+}
+
+func (m *Manager) LogoutUser(data map[string]interface{}, version int64) bool {
+	parser := m.getParser(version)
+	if parser == nil {
+		return false
+	}
+	err := parser.LogoutUser(data)
+	if err != nil {
+		err = errors.Wrap(err, "ParserManager.LogoutUser")
+		m.logger.Error(err)
+		return false
+	}
+	return true
 }
