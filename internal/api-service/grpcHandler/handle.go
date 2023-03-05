@@ -2,6 +2,7 @@ package grpcHandler
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 
 	"github.com/abhirajranjan/gochat/internal/api-service/model"
@@ -10,19 +11,25 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (h *grpcHandler) HandleLoginRequest(modelLoginRequest model.ILoginRequest) (model.ILoginResponse, error) {
+func (h *grpcHandler) HandleLoginRequest(c *gin.Context) (model.ILoginResponse, error) {
+	modelLoginRequest, err := generateLoginRequest(c)
+	if err != nil {
+		h.logger.Error(err)
+		return nil, serviceErrors.NewBindingErr("Bad Request")
+	}
 	ctx := context.Background()
 
 	if err := validateLoginRequest(modelLoginRequest); err != nil {
-		handleValidationErr(err, h.logger, "handle.ValidationError")
+		h.logger.Error(err)
 		return nil, err
 	}
 
 	grpcLoginRequest := modelLoginReqToGrpcLoginReq(modelLoginRequest)
 
+	// TODO: add retry in case of service failure
 	grpcLoginRes, err := h.grpc.VerifyUser(ctx, grpcLoginRequest)
 	if err != nil {
-		handleGrpcServerError(err, h.logger, "handle.handleLoginRequest")
+		h.logger.Error(err)
 		return nil, serviceErrors.ErrInternalServer
 	}
 
@@ -32,39 +39,40 @@ func (h *grpcHandler) HandleLoginRequest(modelLoginRequest model.ILoginRequest) 
 	case http.StatusInternalServerError:
 		handleInternalGrpcEndpointError(err, h.logger, "handler.handleLoginRequest")
 		return nil, serviceErrors.ErrInternalServer
+	case http.StatusOK:
+		return modelLoginRes, nil
+	default:
+		h.logger.Warnf("unknown error from grpc Endpoint: %s", err)
+		return nil, serviceErrors.ErrInternalServer
 	}
-
-	return modelLoginRes, nil
 }
 
-// generate login request from gin.Context
-//
-// arguments :
-// - *gin.Context, has a models.LoginRequest
-//
-// returns :
-// - loginrequest, if validation matches else write StatusBadRequest and returns nil
-//
-// check only binding errors
-func (h *grpcHandler) GenerateLoginRequest(c *gin.Context) (model.ILoginRequest, error) {
-	var request LoginRequest
-	err := c.ShouldBind(request)
-
-	if err == nil {
-		return &request, nil
+func (h *grpcHandler) GeneratePayloadData(modelLoginResponse model.ILoginResponse) map[string]interface{} {
+	out := map[string]interface{}{}
+	if err := GenerateMap(modelLoginResponse, out); err != nil {
+		h.logger.Error(errors.Wrap(err, "generate map failed, using classic marshal method"))
+		out = map[string]interface{}{}
+		b, err := json.Marshal(modelLoginResponse)
+		if err != nil {
+			// ? what Now ?
+			h.logger.Error(errors.Wrap(err, "classic method failed"))
+		}
+		if err := json.Unmarshal(b, &out); err != nil {
+			// ? what Now ?
+			h.logger.Error(err)
+			h.logger.Error(errors.Wrap(err, "classic method failed"))
+		}
 	}
 
-	bindingerr := handleBindingErr(err)
-	return nil, bindingerr
-}
-
-func (h *grpcHandler) GeneratePayloadData(modelLoginResponse model.ILoginResponse) (out map[string]interface{}) {
-	GenerateMap(modelLoginResponse, out)
-	_, err := h.payloadManager.AddPayload(out)
+	out, err := h.payloadManager.AddPayload(out)
 	if err != nil {
 		h.logger.Error(serviceErrors.NewStandardErr("handler.GeneratePayloadData", "payload function failed to parse", out, err))
+		out, err := h.payloadManager.Encode(out, h.payloadManager.GetMinimumVersion())
+		if err != nil {
+			h.logger.Error(serviceErrors.NewStandardErr("handler.GeneratePayloadData", "payload function minimum version failed to parse", out, err))
+		}
 	}
-	return
+	return out
 }
 
 func (h *grpcHandler) ExtractPayloadData(claims map[string]interface{}) model.IPayloadData {

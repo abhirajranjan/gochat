@@ -3,24 +3,24 @@ package grpcHandler
 import "github.com/abhirajranjan/gochat/internal/api-service/model"
 
 type LoginRequest struct {
-	username string
-	password string
+	Username string `json:"username"`
+	Password string `json:"password"`
 }
 
 func (l *LoginRequest) GetUsername() string {
-	return l.username
+	return l.Username
 }
 
 func (l *LoginRequest) SetUsername(username string) {
-	l.username = username
+	l.Username = username
 }
 
 func (l *LoginRequest) GetPassword() string {
-	return l.password
+	return l.Password
 }
 
 func (l *LoginRequest) SetPassword(password string) {
-	l.password = password
+	l.Password = password
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////

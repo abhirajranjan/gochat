@@ -18,7 +18,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	logger := logger.NewLogger(&cfg.Logger)
+	logger := logger.NewLogger(cfg.Logger)
 	grpcServer := grpcServer.NewGrpcServer(cfg.Grpc, logger)
 	grpcServer.Run()
 	grpchandler := grpcHandler.NewGrpcHandler(logger, grpcServer)

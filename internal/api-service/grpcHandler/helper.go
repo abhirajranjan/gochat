@@ -4,22 +4,32 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/gin-gonic/gin"
 	"github.com/pkg/errors"
 
 	"github.com/abhirajranjan/gochat/internal/api-service/model"
 	"github.com/abhirajranjan/gochat/internal/api-service/proto/loginService"
 	"github.com/abhirajranjan/gochat/internal/api-service/serviceErrors"
+	"github.com/abhirajranjan/gochat/pkg/logger"
 )
 
 const (
 	payloadName = "payload"
 )
 
-// convert model login request struct to grpc proto defined login request
-func modelLoginReqToGrpcLoginReq(modelLoginRequest model.ILoginRequest) (grpcLoginRequest *loginService.LoginRequest) {
-	grpcLoginRequest.Username = modelLoginRequest.GetUsername()
-	grpcLoginRequest.Password = modelLoginRequest.GetPassword()
+// handle any internal error that are returned by the grpc endpoint
+//
+// run when response.ErrCode == http.StatusInternalServerError
+func handleInternalGrpcEndpointError(err error, logger logger.ILogger, wrap string) {
+	logger.Error(errors.Wrap(err, wrap))
+}
 
+// convert model login request struct to grpc proto defined login request
+func modelLoginReqToGrpcLoginReq(modelLoginRequest model.ILoginRequest) *loginService.LoginRequest {
+	grpcLoginRequest := &loginService.LoginRequest{
+		Username: modelLoginRequest.GetUsername(),
+		Password: modelLoginRequest.GetPassword(),
+	}
 	return grpcLoginRequest
 }
 
@@ -29,12 +39,12 @@ func modelLoginReqToGrpcLoginReq(modelLoginRequest model.ILoginRequest) (grpcLog
 func validateLoginRequest(request model.ILoginRequest) serviceErrors.IErr {
 	ErrorArray := serviceErrors.ErrorArray{}
 
-	if request.GetUsername() == "" && !IsAlphanum(request.GetUsername()) {
+	if request.GetUsername() == "" || !IsAlphanum(request.GetUsername()) {
 		err := serviceErrors.NewValidationErr("username", "username should be non empty and alpha numeric only")
 		ErrorArray = append(ErrorArray, err)
 	}
 
-	if request.GetPassword() == "" && !IsAlphanumWithSpecialChar(request.GetPassword()) {
+	if request.GetPassword() == "" || !IsAlphanumWithSpecialChar(request.GetPassword()) {
 		err := serviceErrors.NewValidationErr("password", fmt.Sprintf("password should be non empty and alpha numeric with %s", SpecialCharacters))
 		ErrorArray = append(ErrorArray, err)
 	}
@@ -57,12 +67,12 @@ func grpcLoginResToModelRes(grpcLoginRes *loginService.LoginResponse) model.ILog
 // input: any type
 //
 // return: map[string]interface{} for struct else input
-func GenerateMap(A interface{}, out map[string]interface{}) {
-	_generateMap(reflect.ValueOf(A), out)
+func GenerateMap(A interface{}, out map[string]interface{}) error {
+	return _generateMap(reflect.ValueOf(A), out)
 }
 
 // generate map[string]interface{} object from reflect.Value recursively
-func _generateMap(val reflect.Value, out map[string]interface{}) {
+func _generateMap(val reflect.Value, out map[string]interface{}) error {
 	// check if given val is a interface or not and if yes them get the underlying dynamic object
 	if val.Kind() == reflect.Interface && !val.IsNil() {
 		elm := val.Elem()
@@ -74,6 +84,10 @@ func _generateMap(val reflect.Value, out map[string]interface{}) {
 	// if val is pointer then get the underlying object
 	if val.Kind() == reflect.Pointer {
 		val = val.Elem()
+	}
+
+	if val.Kind() != reflect.Struct {
+		return serviceErrors.NewStandardErr("handler._generateMap", "value passed does not implement struct", val)
 	}
 
 	// looping over struct fields
@@ -123,7 +137,10 @@ func _generateMap(val reflect.Value, out map[string]interface{}) {
 		// generate map of it recursively
 		if valueField.Kind() == reflect.Struct {
 			recursiveout := map[string]interface{}{}
-			_generateMap(valueField, recursiveout)
+			err := _generateMap(valueField, recursiveout)
+			if err != nil {
+				return errors.Wrap(err, "handler._generateMap")
+			}
 			out[name] = recursiveout
 			continue
 		}
@@ -132,6 +149,7 @@ func _generateMap(val reflect.Value, out map[string]interface{}) {
 		outval := valueField.Interface()
 		out[name] = outval
 	}
+	return nil
 }
 
 func GetVersionFromClaims(claims map[string]interface{}) (int64, error) {
@@ -145,4 +163,24 @@ func GetVersionFromClaims(claims map[string]interface{}) (int64, error) {
 		return 0, serviceErrors.NewStandardErr("handler.ExtractPayloadData", "jwt has unknown type version", version)
 	}
 	return ver, nil
+}
+
+// generate login request from gin.Context
+//
+// arguments :
+// - *gin.Context, has a models.LoginRequest
+//
+// returns :
+// - loginrequest, if validation matches else write StatusBadRequest and returns nil
+//
+// check only binding errors
+func generateLoginRequest(c *gin.Context) (model.ILoginRequest, error) {
+	var request LoginRequest
+	err := c.ShouldBind(&request)
+
+	if err != nil {
+		return nil, serviceErrors.NewBindingErr(err.Error())
+	}
+
+	return &request, nil
 }

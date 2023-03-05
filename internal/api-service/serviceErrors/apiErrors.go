@@ -13,25 +13,21 @@ type IErr interface {
 }
 
 type BindingErr struct {
-	Params     string `json:"params"`
 	Message    string `json:"message"`
 	StatusCode int    `json:"-"`
 }
 
 func (e *BindingErr) To_json() ([]byte, error) {
-	b, err := json.Marshal(e)
-	if err != nil {
-		return []byte{}, err
-	}
+	b := []byte(e.Message)
 	return b, nil
 }
 
 func (e *BindingErr) Error() string {
-	return fmt.Sprintf("%s: %s", e.Params, e.Message)
+	return e.Message
 }
 
-func NewBindingErr(params string, message string) IErr {
-	return &BindingErr{Params: params, Message: message, StatusCode: http.StatusBadRequest}
+func NewBindingErr(message string) IErr {
+	return &BindingErr{Message: message, StatusCode: http.StatusBadRequest}
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////

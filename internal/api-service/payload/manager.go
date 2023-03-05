@@ -16,21 +16,15 @@ var (
 )
 
 type Manager struct {
-	logger        logger.ILogger
-	mu            sync.RWMutex
-	parsers       map[int64]model.IParser
-	latestVersion int64
-
-	//config
-
-	// if inplace is set to true then all parser functions
-	// will do inplace parsing and conversely if set to false
-	// then parsers will return type interface{} having modified value
-	inplace bool
+	logger         logger.ILogger
+	mu             sync.RWMutex
+	parsers        map[int64]model.IParser
+	latestVersion  int64
+	minimumVersion int64
 }
 
-func NewManager(logger logger.ILogger, inplace bool) model.IPayLoadManager {
-	return &Manager{logger: logger, inplace: inplace}
+func NewManager(logger logger.ILogger) model.IPayLoadManager {
+	return &Manager{logger: logger, parsers: map[int64]model.IParser{}}
 }
 
 func (m *Manager) RegisterParser(parser model.IParser) error {
@@ -50,7 +44,7 @@ func (m *Manager) RegisterParser(parser model.IParser) error {
 
 func (m *Manager) getParser(version int64) model.IParser {
 	m.mu.RLock()
-	defer m.mu.Unlock()
+	defer m.mu.RUnlock()
 
 	parser, ok := m.parsers[version]
 	if !ok {
@@ -60,10 +54,22 @@ func (m *Manager) getParser(version int64) model.IParser {
 	return parser
 }
 
+func (m *Manager) SetMinimumVersion(minimiumVersion int64) error {
+	if parser := m.getParser(minimiumVersion); parser != nil {
+		m.minimumVersion = minimiumVersion
+		return nil
+	}
+	return ErrNoParserFound
+}
+
+func (m *Manager) GetMinimumVersion() int64 {
+	return m.minimumVersion
+}
+
 func (m *Manager) Encode(data map[string]interface{}, version int64) (map[string]interface{}, error) {
 	parser := m.getParser(version)
 	if parser != nil {
-		return parser.Encode(data, m.inplace)
+		return parser.Encode(data)
 	}
 	return nil, ErrNoParserFound
 }

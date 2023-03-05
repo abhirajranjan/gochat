@@ -59,6 +59,7 @@ func mapstructureHooks() []viper.DecoderConfigOption {
 	return hooks
 }
 
+// TODO: add plugin architecture to add hooks
 func stringToTimeDurationHookFunc() viper.DecoderConfigOption {
 	return func(config *mapstructure.DecoderConfig) {
 		config.DecodeHook = mapstructure.ComposeDecodeHookFunc(

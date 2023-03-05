@@ -25,8 +25,7 @@ type ILoginResponse interface {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 type IHandler interface {
-	HandleLoginRequest(ILoginRequest) (ILoginResponse, error)
-	GenerateLoginRequest(*gin.Context) (ILoginRequest, error)
+	HandleLoginRequest(*gin.Context) (ILoginResponse, error)
 	GeneratePayloadData(ILoginResponse) map[string]interface{}
 	ExtractPayloadData(map[string]interface{}) IPayloadData
 	VerifyUser(IPayloadData) bool
@@ -49,7 +48,7 @@ type IPayloadData interface {
 type IParser interface {
 	SupportsVersion() int64
 	// if inplace is true then add additional fields to input map else generate output map
-	Encode(map[string]interface{}, bool) (map[string]interface{}, error)
+	Encode(map[string]interface{}) (map[string]interface{}, error)
 	Decode(map[string]interface{}) (IPayloadData, error)
 	VerifyUser(IPayloadData) bool
 	LogoutUser(map[string]interface{}) error
@@ -62,4 +61,6 @@ type IPayLoadManager interface {
 	Decode(map[string]interface{}, int64) (IPayloadData, error)
 	VerifyUser(IPayloadData) bool
 	LogoutUser(map[string]interface{}, int64) bool
+	SetMinimumVersion(minimiumVersion int64) error
+	GetMinimumVersion() int64
 }

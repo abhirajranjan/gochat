@@ -14,12 +14,15 @@ type grpcHandler struct {
 }
 
 func NewGrpcHandler(logger logger.ILogger, grpcServer model.IGrpcServer) model.IHandler {
+	manager := payload.NewManager(logger)
 	handler := &grpcHandler{
 		logger:         logger,
 		grpc:           grpcServer,
-		payloadManager: payload.NewManager(logger, true),
+		payloadManager: manager,
 	}
 
-	handler.payloadManager.RegisterParser(mockParser.NewMockParser())
+	mockparser := mockParser.NewMockParser()
+	handler.payloadManager.RegisterParser(mockparser)
+	handler.payloadManager.SetMinimumVersion(mockparser.SupportsVersion())
 	return handler
 }

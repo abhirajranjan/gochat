@@ -23,7 +23,7 @@ func NewServer(logger logger.ILogger, cfg config.ServerConf, grpcHandler model.I
 	api.POST("/messages", jwtauth.MiddlewareFunc(), route.PostMessageRouteHandler())
 	api.GET("/refreshtoken", jwtauth.RefreshHandler)
 	api.GET("/logout", jwtauth.LogoutHandler, route.Logout())
-	api.GET("/login", jwtauth.LoginHandler)
+	api.POST("/login", jwtauth.LoginHandler)
 
 	return engine
 }

@@ -56,12 +56,7 @@ func NewJWTMiddleware(cfg AuthConf, logger logger.ILogger, methodhandler model.I
 }
 
 func (j *jwtAuth) authenticator(c *gin.Context) (interface{}, error) {
-	loginreq, err := j.handler.GenerateLoginRequest(c)
-	if err != nil {
-		return nil, err
-	}
-
-	loginres, err := j.handler.HandleLoginRequest(loginreq)
+	loginres, err := j.handler.HandleLoginRequest(c)
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +77,7 @@ func (j *jwtAuth) HTTPStatusMessageFunc(e error, c *gin.Context) string {
 		return "internal server error"
 	}
 	j.Logger.Error(errors.Wrap(e, "jwtauth.httpSatusMessageFunc"))
-	return e.Error()
+	return ""
 }
 
 func (j *jwtAuth) payloadFunc(data interface{}) jwt.MapClaims {
@@ -114,7 +109,7 @@ func (j *jwtAuth) refreshResponse(c *gin.Context, code int, token string, expire
 }
 
 func (j *jwtAuth) loginResponse(c *gin.Context, code int, token string, expire time.Time) {
-	j.Logger.Debug("login successfull, token:%s expiry:%v", token, expire)
+	j.Logger.Debugf("login successful, token: %s expiry: %v", token, expire)
 	c.JSON(http.StatusOK, gin.H{
 		"code":   http.StatusOK,
 		"token":  token,

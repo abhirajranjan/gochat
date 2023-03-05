@@ -24,7 +24,7 @@ func (p *mockParser) VerifyUser(data model.IPayloadData) bool {
 	return true
 }
 
-func (p *mockParser) Encode(i map[string]interface{}, inplace bool) (map[string]interface{}, error) {
+func (p *mockParser) Encode(i map[string]interface{}) (map[string]interface{}, error) {
 	return i, nil
 }
 
