@@ -17,10 +17,10 @@ type jwtAuth struct {
 	*jwt.GinJWTMiddleware
 	handler model.IHandler
 	Logger  logger.ILogger
-	Cfg     AuthConf
+	Cfg     *AuthConf
 }
 
-func NewJWTMiddleware(cfg AuthConf, logger logger.ILogger, methodhandler model.IHandler) (*jwtAuth, error) {
+func NewJWTMiddleware(cfg *AuthConf, logger logger.ILogger, methodhandler model.IHandler) (*jwtAuth, error) {
 	jwtauth := &jwtAuth{
 		Cfg:     cfg,
 		Logger:  logger,
