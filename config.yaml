@@ -1,0 +1,19 @@
+appname: test
+server:
+    auth:
+        realm: test zone
+        key: abhiraj ranjan
+        identitykey: id
+        tokenlookup: 'header: Authorization, query: token, cookie: jwt'
+        timeoutduration: 1h0m0s
+        maxrefresh: 1h0m0s
+        tokenheadname: Bearer
+logger:
+    appname: test
+    level: debug
+    dev: true
+    encoder: console
+grpc:
+    addr: ""
+    connectiontimeout: 0s
+    functioncalltimeout: 0s

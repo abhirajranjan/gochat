@@ -13,6 +13,11 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+var jwterr = []error{jwt.ErrForbidden,
+	jwt.ErrFailedTokenCreation, jwt.ErrExpiredToken, jwt.ErrEmptyAuthHeader,
+	jwt.ErrMissingExpField, jwt.ErrWrongFormatOfExp, jwt.ErrInvalidAuthHeader,
+	jwt.ErrEmptyQueryToken, jwt.ErrEmptyCookieToken, jwt.ErrEmptyParamToken}
+
 type jwtAuth struct {
 	*jwt.GinJWTMiddleware
 	handler model.IHandler
@@ -29,7 +34,7 @@ func NewJWTMiddleware(cfg *AuthConf, logger logger.ILogger, methodhandler model.
 
 	jwtmw, err := jwt.New(&jwt.GinJWTMiddleware{
 		Realm:         cfg.Realm,
-		Key:           cfg.Key,
+		Key:           []byte(cfg.Key),
 		Timeout:       cfg.TimeoutDuration,
 		MaxRefresh:    cfg.MaxRefresh,
 		IdentityKey:   cfg.IdentityKey,
@@ -68,16 +73,24 @@ func (j *jwtAuth) HTTPStatusMessageFunc(e error, c *gin.Context) string {
 	if b, ok := e.(serviceErrors.IErr); ok {
 		bytes, err := b.To_json()
 		if err != nil {
-			j.Logger.Error(errors.Wrap(err, "jwtauth.httpSatusMessageFunc"))
-			return ""
+			j.Logger.Warn(errors.Wrap(err, "jwtauth.httpStatusMessageFunc"))
+			return "internal server error"
 		}
 		return string(bytes)
 	}
+
 	if errors.Is(e, serviceErrors.ErrInternalServer) {
 		return "internal server error"
 	}
-	j.Logger.Error(errors.Wrap(e, "jwtauth.httpSatusMessageFunc"))
-	return ""
+
+	for _, err := range jwterr {
+		if errors.Is(e, err) {
+			return err.Error()
+		}
+	}
+
+	j.Logger.Warn(errors.Wrap(e, "jwtauth.httpStatusMessageFunc"))
+	return "internal server error"
 }
 
 func (j *jwtAuth) payloadFunc(data interface{}) jwt.MapClaims {
@@ -126,7 +139,7 @@ func (j *jwtAuth) LogoutResponse(c *gin.Context, code int) {
 }
 
 func (j *jwtAuth) unauthorized(c *gin.Context, code int, message string) {
-	j.Logger.Warnf(`unauthorized jwt token "%s" passed [%d]: %s`, jwt.GetToken(c), code, message)
+	j.Logger.Debugf(`jwt token "%s" failed [%d]: %s`, jwt.GetToken(c), code, message)
 	c.JSON(code, gin.H{
 		"code":    code,
 		"message": message,
