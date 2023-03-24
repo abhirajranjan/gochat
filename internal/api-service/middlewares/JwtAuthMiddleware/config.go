@@ -1,4 +1,4 @@
-package AuthMiddleware
+package JwtAuthMiddleware
 
 import "time"
 

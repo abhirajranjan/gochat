@@ -3,12 +3,17 @@ package v1
 import (
 	"net/http"
 
-	"github.com/abhirajranjan/gochat/internal/api-service/middlewares/AuthMiddleware"
 	"github.com/abhirajranjan/gochat/internal/api-service/model"
 	"github.com/abhirajranjan/gochat/pkg/logger"
 	"github.com/gin-gonic/gin"
-	"github.com/pkg/errors"
 )
+
+type IAuth interface {
+	CheckIfValidAuth() gin.HandlerFunc
+	RefreshToken() gin.HandlerFunc
+	Logout() gin.HandlerFunc
+	Login() gin.HandlerFunc
+}
 
 const VERSION = "v1"
 
@@ -19,19 +24,19 @@ type v1 struct {
 	// logger instance
 	logger logger.ILogger
 
-	// authentication cfg
-	authcfg *AuthMiddleware.AuthConf
-
 	// handler for authentication to help in navigation
 	handler model.IHandler
+
+	// authentication instance
+	Auth IAuth
 }
 
 // V1 factory method to generate new instance of api version v1
 //
 // if calling independently (without controller), explictly call Handle function
 // to register v1 group to gin group
-func NewV1(logger logger.ILogger, authcfg *AuthMiddleware.AuthConf, handler model.IHandler) *v1 {
-	return &v1{logger: logger, authcfg: authcfg, handler: handler}
+func NewV1(logger logger.ILogger, Auth IAuth, handler model.IHandler) *v1 {
+	return &v1{logger: logger, Auth: Auth, handler: handler}
 }
 
 // returns the supported version
@@ -51,20 +56,15 @@ func (v *v1) Handle(group *gin.RouterGroup, handler ...gin.HandlerFunc) {
 
 // add routes to v.group
 func (v *v1) route() {
-	jwtauth, err := AuthMiddleware.NewJWTMiddleware(v.authcfg, v.logger, v.handler)
-	if err != nil {
-		v.logger.Panic(errors.Wrap(err, "jwt.New"))
-	}
-
-	v.group.GET("/:channelid/messages", jwtauth.MiddlewareFunc(), GetMessageRouteHandler())
-	v.group.POST("/messages", jwtauth.MiddlewareFunc(), PostMessageRouteHandler())
-	v.group.GET("/refreshtoken", jwtauth.RefreshHandler)
-	v.group.GET("/logout", jwtauth.LogoutHandler, Logout())
-	v.group.POST("/login", jwtauth.LoginHandler)
+	v.group.GET("/:channelid/messages", v.Auth.CheckIfValidAuth(), GetMessageRouteHandler())
+	v.group.POST("/messages", v.Auth.CheckIfValidAuth(), PostMessageRouteHandler())
+	v.group.GET("/refreshtoken", v.Auth.RefreshToken())
+	v.group.GET("/logout", v.Auth.Logout(), Logout())
+	v.group.POST("/login", v.Auth.Login())
 }
 
 func home() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "missing parameters"})
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid parameters"})
 	}
 }

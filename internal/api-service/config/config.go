@@ -2,7 +2,7 @@ package config
 
 import (
 	"github.com/abhirajranjan/gochat/internal/api-service/grpcServer"
-	"github.com/abhirajranjan/gochat/internal/api-service/middlewares/AuthMiddleware"
+	"github.com/abhirajranjan/gochat/internal/api-service/middlewares/JwtAuthMiddleware"
 	"github.com/abhirajranjan/gochat/pkg/logger"
 )
 
@@ -14,5 +14,5 @@ type Config struct {
 }
 
 type ServerConf struct {
-	Auth AuthMiddleware.AuthConf `mapstructure:"auth"`
+	Auth JwtAuthMiddleware.AuthConf `mapstructure:"auth"`
 }
