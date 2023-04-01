@@ -4,7 +4,6 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/abhirajranjan/gochat/internal/api-service/model"
 	"github.com/abhirajranjan/gochat/internal/api-service/proto/loginService"
 )
 
@@ -15,12 +14,18 @@ func (m *MockGrpcClient) Run() {
 
 }
 
-func (m *MockGrpcClient) VerifyUser(c context.Context, req *loginService.LoginRequest) (*loginService.LoginResponse, error) {
-	user := loginService.UserType{UserID: req.GetUsername(), UserRoles: []int64{}}
+func (m *MockGrpcClient) GetUser(c context.Context, req *loginService.LoginRequest) (*loginService.LoginResponse, error) {
+	user := loginService.UserType{UserID: req.GetUsername(), UserRoles: []string{"user"}}
 	status := loginService.ResponseStatusType{ErrCode: http.StatusOK, Err: ""}
 	return &loginService.LoginResponse{User: &user, Status: &status}, nil
 }
 
-func NewMockGrpcClient() model.IGrpcServer {
+func (m *MockGrpcClient) GetUserbyUserID(c context.Context, userid string) (*loginService.LoginResponse, error) {
+	user := loginService.UserType{UserID: "abhiraj", UserRoles: []string{"user"}}
+	status := loginService.ResponseStatusType{ErrCode: http.StatusOK, Err: ""}
+	return &loginService.LoginResponse{User: &user, Status: &status}, nil
+}
+
+func NewMockGrpcClient() *MockGrpcClient {
 	return &MockGrpcClient{}
 }

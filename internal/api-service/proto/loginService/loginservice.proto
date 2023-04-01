@@ -17,7 +17,7 @@ message ResponseStatusType {
 
 message UserType {
     string UserID = 1;
-    repeated int64 UserRoles = 2;
+    repeated string UserRoles = 2;
 }
 
 message LoginResponse {

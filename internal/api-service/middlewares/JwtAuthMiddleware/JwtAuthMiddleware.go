@@ -6,12 +6,48 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/abhirajranjan/gochat/internal/api-service/model"
 	"github.com/abhirajranjan/gochat/internal/api-service/serviceErrors"
 	"github.com/abhirajranjan/gochat/pkg/logger"
 	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
 )
+
+const (
+	userPermissionKey = "user_required_permission"
+)
+
+type Handler interface {
+	HandleLoginRequest(c *gin.Context) (interface {
+		GetMap() (map[string]interface{}, error)
+		GetErr() string
+		GetErrCode() int64
+	}, error)
+
+	GeneratePayloadData(userData interface {
+		GetMap() (map[string]interface{}, error)
+	}) map[string]interface{}
+
+	ExtractPayloadData(claims map[string]interface{}) interface {
+		Version() int64
+		Get(string) (interface{}, bool)
+	}
+
+	VerifyUser(data interface {
+		Version() int64
+		Get(string) (interface{}, bool)
+	}, reqperm []string) bool
+
+	LogoutUser(claims map[string]interface{}) int
+}
+
+type IPayloadData interface {
+	Version() int64
+	Get(string) (interface{}, bool)
+}
+
+type ILoginResponse interface {
+	GetMap() (map[string]interface{}, error)
+}
 
 var jwterr = []error{jwt.ErrForbidden,
 	jwt.ErrFailedTokenCreation, jwt.ErrExpiredToken, jwt.ErrEmptyAuthHeader,
@@ -20,12 +56,12 @@ var jwterr = []error{jwt.ErrForbidden,
 
 type jwtAuth struct {
 	jwt     *jwt.GinJWTMiddleware
-	handler model.IHandler
+	handler Handler
 	Logger  logger.ILogger
 	Cfg     *AuthConf
 }
 
-func NewJWTMiddleware(cfg *AuthConf, logger logger.ILogger, methodhandler model.IHandler) (*jwtAuth, error) {
+func NewJWTMiddleware(cfg *AuthConf, logger logger.ILogger, methodhandler Handler) (*jwtAuth, error) {
 	jwtauth := &jwtAuth{
 		Cfg:     cfg,
 		Logger:  logger,
@@ -76,7 +112,10 @@ func (j *jwtAuth) Login() gin.HandlerFunc {
 // data return by authenticator is passed to payload function to convert data into mapClaims
 // if error is returned, unauthorised is called
 func (j *jwtAuth) authenticator(c *gin.Context) (interface{}, error) {
-	loginres, err := j.handler.HandleLoginRequest(c)
+	var loginres ILoginResponse
+	var err error
+
+	loginres, err = j.handler.HandleLoginRequest(c)
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +126,7 @@ func (j *jwtAuth) authenticator(c *gin.Context) (interface{}, error) {
 // take whatever was returned from Authenticator and convert it into MapClaims (i.e. map[string]interface{}).
 // set all the values that are needed to be embeded in the jwt token
 func (j *jwtAuth) payloadFunc(data interface{}) jwt.MapClaims {
-	if v, ok := data.(model.ILoginResponse); ok {
+	if v, ok := data.(ILoginResponse); ok {
 		return j.handler.GeneratePayloadData(v)
 	}
 	j.Logger.Warn(serviceErrors.NewStandardErr("jwtAuth.payloadFunc", "cannot decode unmarshal into ILoginResponse", data))
@@ -107,14 +146,20 @@ func (j *jwtAuth) loginResponse(c *gin.Context, code int, token string, expire t
 //* check authentication
 
 // provide access to middleware function
-func (j *jwtAuth) CheckIfValidAuth() gin.HandlerFunc {
-	return j.jwt.MiddlewareFunc()
+func (j *jwtAuth) CheckIfValidAuth(permission []string) gin.HandlerFunc {
+	f := j.jwt.MiddlewareFunc()
+
+	return func(c *gin.Context) {
+		c.Set(userPermissionKey, permission)
+		f(c)
+	}
 }
 
 // fetch the user identity from claims embedded within the jwt token, and pass this identity value to Authorizator
 func (j *jwtAuth) identityHandler(c *gin.Context) interface{} {
 	claims := jwt.ExtractClaims(c)
-	var payload model.IPayloadData = j.handler.ExtractPayloadData(claims)
+	j.Logger.Info("hello : ", claims)
+	var payload IPayloadData = j.handler.ExtractPayloadData(claims)
 	return payload
 }
 
@@ -123,8 +168,21 @@ func (j *jwtAuth) identityHandler(c *gin.Context) interface{} {
 // return true if the user is authorized to continue through with the request, or false if they are not authorized
 // in case of failure, unauthorized is called
 func (j *jwtAuth) authorizator(data interface{}, c *gin.Context) bool {
-	payload := data.(model.IPayloadData)
-	return j.handler.VerifyUser(payload)
+	payload, ok := data.(IPayloadData)
+	if !ok {
+		return false
+	}
+	perm, ok := c.Get(userPermissionKey)
+	if !ok {
+		return false
+	}
+
+	stringperm, ok := perm.([]string)
+	if !ok {
+		return false
+	}
+
+	return j.handler.VerifyUser(payload, stringperm)
 }
 
 //* logout
@@ -138,7 +196,10 @@ func (j *jwtAuth) Logout() gin.HandlerFunc {
 
 // called when logout action was called and returns if successful or not
 func (j *jwtAuth) logoutResponse(c *gin.Context, code int) {
-	claims := jwt.ExtractClaims(c)
+	claims, err := j.jwt.GetClaimsFromJWT(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "no authorization passed"})
+	}
 	status := j.handler.LogoutUser(claims)
 	c.JSON(status, gin.H{
 		"code": status,

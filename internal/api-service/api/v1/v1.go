@@ -3,13 +3,12 @@ package v1
 import (
 	"net/http"
 
-	"github.com/abhirajranjan/gochat/internal/api-service/model"
 	"github.com/abhirajranjan/gochat/pkg/logger"
 	"github.com/gin-gonic/gin"
 )
 
 type IAuth interface {
-	CheckIfValidAuth() gin.HandlerFunc
+	CheckIfValidAuth([]string) gin.HandlerFunc
 	RefreshToken() gin.HandlerFunc
 	Logout() gin.HandlerFunc
 	Login() gin.HandlerFunc
@@ -24,9 +23,6 @@ type v1 struct {
 	// logger instance
 	logger logger.ILogger
 
-	// handler for authentication to help in navigation
-	handler model.IHandler
-
 	// authentication instance
 	Auth IAuth
 }
@@ -35,8 +31,8 @@ type v1 struct {
 //
 // if calling independently (without controller), explictly call Handle function
 // to register v1 group to gin group
-func NewV1(logger logger.ILogger, Auth IAuth, handler model.IHandler) *v1 {
-	return &v1{logger: logger, Auth: Auth, handler: handler}
+func NewV1(logger logger.ILogger, Auth IAuth) *v1 {
+	return &v1{logger: logger, Auth: Auth}
 }
 
 // returns the supported version
@@ -56,8 +52,8 @@ func (v *v1) Handle(group *gin.RouterGroup, handler ...gin.HandlerFunc) {
 
 // add routes to v.group
 func (v *v1) route() {
-	v.group.GET("/:channelid/messages", v.Auth.CheckIfValidAuth(), GetMessageRouteHandler())
-	v.group.POST("/messages", v.Auth.CheckIfValidAuth(), PostMessageRouteHandler())
+	v.group.GET("/:channelid/messages", v.Auth.CheckIfValidAuth([]string{"user"}), GetMessageRouteHandler())
+	v.group.POST("/messages", v.Auth.CheckIfValidAuth([]string{"user"}), PostMessageRouteHandler())
 	v.group.GET("/refreshtoken", v.Auth.RefreshToken())
 	v.group.GET("/logout", v.Auth.Logout(), Logout())
 	v.group.POST("/login", v.Auth.Login())

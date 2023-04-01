@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/abhirajranjan/gochat/internal/api-service/model"
 	"github.com/abhirajranjan/gochat/internal/api-service/proto/loginService"
 	"github.com/abhirajranjan/gochat/pkg/logger"
 	"google.golang.org/grpc"
@@ -20,7 +19,7 @@ type grpcServer struct {
 	client loginService.LoginServiceClient
 }
 
-func NewGrpcServer(config GrpcConfig, logger logger.ILogger) model.IGrpcServer {
+func NewGrpcServer(config GrpcConfig, logger logger.ILogger) *grpcServer {
 	return &grpcServer{
 		logger: logger,
 		config: config,
