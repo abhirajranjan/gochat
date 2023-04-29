@@ -30,6 +30,7 @@ var (
 type IPayloadData interface {
 	Version() int64
 	Get(string) (interface{}, bool)
+	GetSessionID() interface{}
 }
 
 type ILoginResponse interface {
@@ -56,6 +57,7 @@ type IParser interface {
 	Decode(map[string]interface{}) (interface {
 		Version() int64
 		Get(string) (interface{}, bool)
+		GetSessionID() interface{}
 	}, error)
 }
 
@@ -202,6 +204,7 @@ func (m *Manager) decodeWithVersion(data map[string]interface{}, version int64) 
 func (m *Manager) Decode(data map[string]interface{}) (interface {
 	Version() int64
 	Get(string) (interface{}, bool)
+	GetSessionID() interface{}
 }, error) {
 
 	ver := getVersion(data)

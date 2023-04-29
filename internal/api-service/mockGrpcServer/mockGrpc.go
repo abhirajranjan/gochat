@@ -1,4 +1,4 @@
-package grpcServer
+package mockGrpcServer
 
 import (
 	"context"

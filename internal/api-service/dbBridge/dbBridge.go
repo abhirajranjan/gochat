@@ -1,4 +1,4 @@
-package dbHandler
+package dbBridge
 
 import (
 	"context"
@@ -23,17 +23,18 @@ type session struct {
 	UserID string
 }
 
-type dbHandler struct {
+type dbBridge struct {
 	logger   logger.ILogger
 	grpcConn IGrpcServer
 	session  map[string]session
 }
 
-func NewDbHandler(logger logger.ILogger, grpcserver IGrpcServer) *dbHandler {
-	return &dbHandler{logger: logger, grpcConn: grpcserver, session: make(map[string]session)}
+// generate new database bridge to connect to endpoints of database
+func NewDbBridge(logger logger.ILogger, grpcserver IGrpcServer) *dbBridge {
+	return &dbBridge{logger: logger, grpcConn: grpcserver, session: make(map[string]session)}
 }
 
-func (db *dbHandler) GetUser(username string, password string) (interface {
+func (db *dbBridge) GetUser(username string, password string) (interface {
 	GetMap() (map[string]interface{}, error)
 	GetErr() string
 	GetErrCode() int64
@@ -51,7 +52,7 @@ func (db *dbHandler) GetUser(username string, password string) (interface {
 	return userData, nil
 }
 
-func (db *dbHandler) GetUserRolesFromSession(sessionID string) (interface{ Has(string) bool }, bool) {
+func (db *dbBridge) GetUserRolesFromSession(sessionID string) (interface{ Has(string) bool }, bool) {
 	session, ok := db.session[sessionID]
 	if !ok {
 		return nil, false
@@ -67,12 +68,12 @@ func (db *dbHandler) GetUserRolesFromSession(sessionID string) (interface{ Has(s
 	return userData.User.UserRoles, true
 }
 
-func (db *dbHandler) Logout(sessionID string) error {
+func (db *dbBridge) Logout(sessionID string) error {
 	delete(db.session, sessionID)
 	return nil
 }
 
-func (db *dbHandler) GenerateSessionID(userdata interface{}) string {
+func (db *dbBridge) GenerateSessionID(userdata interface{}) string {
 	user, ok := userdata.(*userData)
 	if !ok {
 		return ""
@@ -87,7 +88,7 @@ func (db *dbHandler) GenerateSessionID(userdata interface{}) string {
 	return id
 }
 
-func (db *dbHandler) ActivateSessionByID(id string) bool {
+func (db *dbBridge) ActivateSessionByID(id string) bool {
 	f := db.session[id]
 	f.Status = 1
 	return true

@@ -8,7 +8,8 @@ import (
 )
 
 type IAuth interface {
-	CheckIfValidAuth([]string) gin.HandlerFunc
+	// checks if request have valid permission specified in permissions
+	CheckIfValidAuth(permissions []string) gin.HandlerFunc
 	RefreshToken() gin.HandlerFunc
 	Logout() gin.HandlerFunc
 	Login() gin.HandlerFunc

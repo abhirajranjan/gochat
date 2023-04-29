@@ -41,6 +41,7 @@ type IPayLoadManager interface {
 	Decode(data map[string]interface{}) (interface {
 		Version() int64
 		Get(string) (interface{}, bool)
+		GetSessionID() interface{}
 	}, error)
 }
 

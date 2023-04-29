@@ -30,11 +30,13 @@ type Handler interface {
 	ExtractPayloadData(claims map[string]interface{}) interface {
 		Version() int64
 		Get(string) (interface{}, bool)
+		GetSessionID() interface{}
 	}
 
 	VerifyUser(data interface {
 		Version() int64
 		Get(string) (interface{}, bool)
+		GetSessionID() interface{}
 	}, reqperm []string) bool
 
 	LogoutUser(claims map[string]interface{}) int
@@ -43,6 +45,7 @@ type Handler interface {
 type IPayloadData interface {
 	Version() int64
 	Get(string) (interface{}, bool)
+	GetSessionID() interface{}
 }
 
 type ILoginResponse interface {

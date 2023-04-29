@@ -1,4 +1,4 @@
-package dbHandler
+package dbBridge
 
 type userroles []string
 

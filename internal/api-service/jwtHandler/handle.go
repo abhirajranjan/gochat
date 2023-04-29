@@ -20,6 +20,7 @@ func (h *jwtHandler) HandleLoginRequest(c *gin.Context) (interface {
 	GetErrCode() int64
 }, error) {
 
+	h.logger.Debug(c.Get("username"))
 	modelLoginRequest, err := generateLoginRequest(c)
 	h.logger.Debugf("extracted login request: %#v", modelLoginRequest)
 
@@ -72,6 +73,7 @@ func (h *jwtHandler) GeneratePayloadData(userData interface {
 func (h *jwtHandler) ExtractPayloadData(claims map[string]interface{}) interface {
 	Version() int64
 	Get(string) (interface{}, bool)
+	GetSessionID() interface{}
 } {
 	data, err := h.payloadManager.Decode(claims)
 	if err != nil {
@@ -84,6 +86,7 @@ func (h *jwtHandler) ExtractPayloadData(claims map[string]interface{}) interface
 func (h *jwtHandler) VerifyUser(data interface {
 	Version() int64
 	Get(string) (interface{}, bool)
+	GetSessionID() interface{}
 }, reqperm []string) bool {
 
 	if data == nil {
@@ -91,7 +94,11 @@ func (h *jwtHandler) VerifyUser(data interface {
 		return false
 	}
 
-	sessionID := h.getSessionID(data)
+	sessionID, ok := data.GetSessionID().(string)
+	if !ok {
+		return false
+	}
+
 	if sessionID == "" {
 		return false
 	}
@@ -118,9 +125,13 @@ func (h *jwtHandler) LogoutUser(claims map[string]interface{}) int {
 		return http.StatusInternalServerError
 	}
 
-	sessionID := h.getSessionID(data)
+	sessionID, ok := data.GetSessionID().(string)
+	if !ok {
+		return http.StatusAccepted
+	}
+
 	if sessionID == "" {
-		return http.StatusInternalServerError
+		return http.StatusAccepted
 	}
 
 	if err := h.dbHandler.Logout(sessionID); err != nil {
@@ -129,20 +140,4 @@ func (h *jwtHandler) LogoutUser(claims map[string]interface{}) int {
 	}
 	h.logger.Debug("user logout successfully")
 	return http.StatusOK
-}
-
-func (h *jwtHandler) getSessionID(data IPayloadData) string {
-	_sessionID, ok := data.Get("sessionID")
-	if !ok {
-		h.logger.Debug("failed to get session ID from payload")
-		return ""
-	}
-
-	sessionID, ok := _sessionID.(string)
-	if !ok {
-		h.logger.Debugf("failed to convert sessionID to string")
-		return ""
-	}
-
-	return sessionID
 }
