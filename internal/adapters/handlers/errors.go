@@ -22,3 +22,7 @@ func setInternalServerError(ctx *gin.Context) {
 func setBadRequest(ctx *gin.Context) {
 	ctx.AbortWithStatus(http.StatusBadRequest)
 }
+
+func setBadRequestWithErr(ctx *gin.Context, err error) {
+	ctx.AbortWithError(http.StatusBadRequest, err)
+}

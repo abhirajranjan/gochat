@@ -4,29 +4,12 @@ import (
 	"gochat/config"
 	"gochat/config/parser/yamlParser"
 	"gochat/internal/adapters/handlers"
-	"gochat/internal/adapters/repositories/redis"
+	"gochat/internal/adapters/repositories/sql"
 	"gochat/internal/app"
+	"gochat/internal/core/services"
 	"gochat/logger"
 	"log"
 )
-
-// func main() {
-// 	// parse configs
-// 	cfg, err := config.LoadConfig("config.yaml")
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-
-// 	// logger configs
-// 	logger := logger.NewLogger(cfg.Logger)
-// 	// add logger writer to which logger write into
-// 	// can be anything that implements io.Writer interface
-// 	logger.AddWriter(os.Stdout)
-// 	logger.InitLogger()
-
-// 	routerEngine := router.Route(logger, &cfg.Server)
-// 	routerEngine.Run()
-// }
 
 func main() {
 	yamlparser := yamlParser.NewYamlParser("config.yaml")
@@ -34,6 +17,8 @@ func main() {
 	var cfg struct {
 		Logger config.LoggerConfig
 		App    config.AppConfig
+		Sql    config.SqlConfig
+		Jwt    config.JwtConfig
 	}
 	if err := yamlparser.Load(&cfg); err != nil {
 		log.Fatal(err)
@@ -41,8 +26,11 @@ func main() {
 
 	applogger := logger.NewLogger(cfg.Logger)
 
-	redisrepo := redis.NewRedisRepository(applogger)
-	handler := handlers.NewHandler(redisrepo, applogger)
+	repo, err := sql.NewMySqlRepository(cfg.Sql)
+	applogger.Panic(err)
+
+	service := services.NewService(repo)
+	handler := handlers.NewHandler(cfg.Jwt, service, applogger)
 	server := app.NewServer(cfg.App, handler, applogger)
 
 	server.Start()

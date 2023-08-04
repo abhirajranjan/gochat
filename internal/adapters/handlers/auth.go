@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"gochat/internal/core/domain"
+	"gochat/internal/core/ports"
 	"net/http"
 	"strconv"
 	"strings"
@@ -42,7 +43,10 @@ func (h *handler) HandleGoogleAuth(ctx *gin.Context) {
 	}
 
 	user, err := h.service.LoginRequest(loginRequest)
-	if err != nil {
+	if errors.Is(err, ports.ErrDomain) {
+		setBadRequestWithErr(ctx, err)
+		return
+	} else if err != nil {
 		h.logger.Errorf("HandleGoogleAuth: %w", err)
 		setInternalServerError(ctx)
 		return

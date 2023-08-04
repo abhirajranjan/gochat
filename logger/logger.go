@@ -56,7 +56,6 @@ var loggerLevelMap = map[string]zapcore.Level{
 
 func NewLogger(conf config.LoggerConfig) *logger {
 	l := logger{level: conf.Level, dev: conf.Dev, encoder: conf.Encoder}
-	l.InitLogger()
 	return &l
 }
 

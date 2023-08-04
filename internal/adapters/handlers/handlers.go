@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"gochat/config"
 	"gochat/internal/core/domain"
 	"gochat/internal/core/ports"
@@ -42,20 +43,9 @@ func NewHandler(config config.JwtConfig, s ports.Service, l logger.ILogger) *han
 
 // returns recent user messages
 func (h *handler) GetUserMessages(ctx *gin.Context) {
-	// extract user info set by middlewares
-	var userid int64
-
-	sessionUntyped, ok := ctx.Get("userId")
-	if !ok {
+	userid := ctx.GetInt64("userId")
+	if userid == 0 {
 		h.logger.Errorf("GetUserMessages: %w", errors.Errorf("error getting userid"))
-		setInternalServerError(ctx)
-		return
-	}
-
-	if id, ok := sessionUntyped.(int64); ok {
-		userid = id
-	} else {
-		h.logger.Errorf("GetUserMessages: %w", errors.Errorf("incorrect userid type in context"))
 		setInternalServerError(ctx)
 		return
 	}
@@ -98,6 +88,14 @@ func (h *handler) GetMessagesFromChannel(ctx *gin.Context) {
 
 // post a new message to channel
 func (h *handler) PostMessageInChannel(ctx *gin.Context) {
+	// extract user info set by middlewares
+	userid := ctx.GetInt64("userId")
+	if userid == 0 {
+		h.logger.Errorf("GetUserMessages: %w", errors.Errorf("error getting userid"))
+		setInternalServerError(ctx)
+		return
+	}
+
 	channelid_string := ctx.Params.ByName("channelid")
 	if channelid_string == "" {
 		h.logger.Debug("PostMessageInChannel: no channelid passed")
@@ -119,14 +117,20 @@ func (h *handler) PostMessageInChannel(ctx *gin.Context) {
 		return
 	}
 
-	message, err = h.service.PostMessageInChannel(int64(channelid), message)
+	if message.UserId != userid {
+		h.logger.Debug("PostMessageInChannel: request sender does not match with message embeded user")
+		setBadRequestWithErr(ctx, fmt.Errorf("request sender does not match with message embeded user"))
+		return
+	}
+
+	msg, err := h.service.PostMessageInChannel(int64(channelid), &message)
 	if err != nil {
 		h.logger.Debugf("PostMessageInChannel: %w", err)
 		setInternalServerError(ctx)
 		return
 	}
 
-	ctx.JSON(http.StatusOK, message.Id)
+	ctx.JSON(http.StatusOK, msg.Id)
 }
 
 func (h *handler) HandleWS(ctx *gin.Context) {
