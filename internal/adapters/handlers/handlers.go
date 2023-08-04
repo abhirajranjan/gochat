@@ -111,14 +111,19 @@ func (h *handler) PostMessageInChannel(ctx *gin.Context) {
 	}
 
 	var message domain.Message
-	if err := ctx.Bind(&message); err != nil {
+	if err := ctx.BindJSON(&message); err != nil {
 		h.logger.Debugf("PostMessageInChannel: ctx.Bind: %w", err)
+		return
+	}
+
+	if len(message.Content) == 0 || message.UserId == 0 {
+		h.logger.Debugf("PostMessageInChannel: invalid credential provided %#v", message)
 		setBadRequest(ctx)
 		return
 	}
 
 	if message.UserId != userid {
-		h.logger.Debug("PostMessageInChannel: request sender does not match with message embeded user")
+		h.logger.Debugf("PostMessageInChannel: request sender [%d] does not match with message embeded user [%d]", userid, message.UserId)
 		setBadRequestWithErr(ctx, fmt.Errorf("request sender does not match with message embeded user"))
 		return
 	}

@@ -37,7 +37,7 @@ type Message struct {
 	UserId  int64
 	At      time.Time
 	Type    MessageType
-	Content []byte
+	Content []byte `json:",string"`
 }
 
 type Channel struct {
