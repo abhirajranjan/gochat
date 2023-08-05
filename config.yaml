@@ -1,19 +1,22 @@
-appname: test
-server:
-    auth:
-        realm: test zone
-        key: abhiraj ranjan
-        identitykey: id
-        tokenlookup: 'header: Authorization, query: token, cookie: jwt'
-        timeoutduration: 1h0m0s
-        maxrefresh: 1h0m0s
-        tokenheadname: Bearer
+app:
+    # addr for server localhost:8080
+    addr: 
+sql:
+    # dsn remote connection url
+    dsn: 
+    # max sql query execution time  
+    sqltimeout: 5s
+jwt:
+    # jwt hashing key
+    key:
+    # jet expiry time
+    expiry: 5h
 logger:
+    # appname for logger
     appname: test
+    # level of logging: debug, info, warn, error, dpanic, panic, fatal
     level: debug
+    # if true then developer encoder else production encoder 
     dev: true
+    # writer format: console, json 
     encoder: console
-grpc:
-    addr: ""
-    connectiontimeout: 0s
-    functioncalltimeout: 0s
