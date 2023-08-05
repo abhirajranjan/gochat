@@ -6,6 +6,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func initWebsocket(route gin.IRoutes, handler ports.Handler) {
-	route.Any("/", handler.HandleWS)
+func initWebsocket(route *gin.RouterGroup, handler ports.Handler) {
+	route.GET("/", handler.HandleWS)
 }

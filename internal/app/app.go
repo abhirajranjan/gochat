@@ -32,8 +32,8 @@ func NewServer(config config.AppConfig, srvhandler ports.Handler, logger logger.
 
 	userGroup := server.engine.Group("/user", server.handler.AuthMiddleware)
 	messagesGroup := server.engine.Group("/messages", server.handler.AuthMiddleware)
-	oauth := server.engine.Any("/oauth")
-	ws := server.engine.Any("/ws")
+	oauth := server.engine.Group("/oauth")
+	ws := server.engine.Group("/ws")
 
 	initUserRoute(userGroup, server.handler)
 	initMessageRoute(messagesGroup, server.handler)

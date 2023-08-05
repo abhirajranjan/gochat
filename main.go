@@ -1,38 +1,51 @@
 package main
 
 import (
+	"context"
+	"log"
+	"os"
+	"os/signal"
+	"syscall"
+
 	"gochat/config"
-	"gochat/config/parser/yamlParser"
+	"gochat/config/parser"
 	"gochat/internal/adapters/handlers"
 	"gochat/internal/adapters/repositories/sql"
 	"gochat/internal/app"
 	"gochat/internal/core/services"
 	"gochat/logger"
-	"log"
 )
 
 func main() {
-	yamlparser := yamlParser.NewYamlParser("config.yaml")
-
 	var cfg struct {
 		Logger config.LoggerConfig
 		App    config.AppConfig
 		Sql    config.SqlConfig
 		Jwt    config.JwtConfig
 	}
-	if err := yamlparser.Load(&cfg); err != nil {
+	if err := parser.Load(&cfg, "config.yaml"); err != nil {
 		log.Fatal(err)
 	}
+	log.Printf("loaded config: %+v\n", cfg)
 
 	applogger := logger.NewLogger(cfg.Logger)
+	applogger.InitLogger()
 
 	repo, err := sql.NewMySqlRepository(cfg.Sql)
-	applogger.Panic(err)
+	if err != nil {
+		applogger.Panic(err)
+	}
 
 	service := services.NewService(repo)
 	handler := handlers.NewHandler(cfg.Jwt, service, applogger)
 	server := app.NewServer(cfg.App, handler, applogger)
 
 	server.Start()
-	//TODO: add triggers and for select for graceful shutdown of server
+
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+
+	sig := <-sigs
+	applogger.Infof("stopping server: %s", sig)
+	server.Stop(context.Background())
 }

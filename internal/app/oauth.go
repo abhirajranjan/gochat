@@ -6,6 +6,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func initOAuth(router gin.IRoutes, handler ports.Handler) {
-	router.Use(handler.HandleGoogleAuth)
+func initOAuth(router *gin.RouterGroup, handler ports.Handler) {
+	router.GET("/", handler.HandleGoogleAuth)
 }
