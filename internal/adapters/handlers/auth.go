@@ -22,14 +22,20 @@ func (h *handler) HandleGoogleAuth(ctx *gin.Context) {
 	)
 
 	if err := ctx.Bind(&cred); err != nil {
-		h.logger.Debugf("HandleGoogleAuth: error binding context, %w", err)
-		setUnauthorised(ctx)
+		h.logger.Debugf("ctx.Bind, %w", err)
 		return
 	}
 
-	_, _, err := h.jwtParser.ParseUnverified(cred.Token(), &claims)
+	if cred.Token == "" {
+		setInvalidToken(ctx)
+		return
+	}
+
+	h.logger.Debugf("HandleGoogleAuth %s", cred.Token)
+
+	_, _, err := h.jwtParser.ParseUnverified(cred.GetToken(), &claims)
 	if err != nil {
-		h.logger.Debugf("HandleGoogleAuth: error parsing token %w", err)
+		h.logger.Debugf("jwtParser: %w", err)
 		setInvalidToken(ctx)
 		return
 	}
@@ -47,10 +53,12 @@ func (h *handler) HandleGoogleAuth(ctx *gin.Context) {
 		setBadRequestWithErr(ctx, err)
 		return
 	} else if err != nil {
-		h.logger.Errorf("HandleGoogleAuth: %w", err)
+		h.logger.Errorf("service.LoginRequest: %w", err)
 		setInternalServerError(ctx)
 		return
 	}
+
+	h.logger.Debugf("%#v", user)
 
 	sessionjwt = domain.SessionJwtModel{
 		JwtModel: domain.JwtModel{
@@ -70,7 +78,7 @@ func (h *handler) HandleGoogleAuth(ctx *gin.Context) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, sessionjwt)
 	jwt, err := token.SignedString([]byte(h.config.Key))
 	if err != nil {
-		h.logger.Errorf("HandleGoogleAuth: %w", err)
+		h.logger.Errorf("token.SignedString: %w", err)
 		setInternalServerError(ctx)
 		return
 	}
@@ -85,7 +93,7 @@ func (h *handler) AuthMiddleware(ctx *gin.Context) {
 
 	jwtoken, err := extractTokenFromCtx(ctx)
 	if err != nil {
-		h.logger.Debugf("authMiddleware: %w", err)
+		h.logger.Debugf("extractTokenFromCtx: %w", err)
 		setUnauthorised(ctx)
 		return
 	}
@@ -99,7 +107,7 @@ func (h *handler) AuthMiddleware(ctx *gin.Context) {
 		return nil, errors.New("wrong algorithm")
 
 	}); err != nil {
-		h.logger.Debugf("authMiddleware: %w", err)
+		h.logger.Debugf("jwtParser.ParseWithClaims: %w", err)
 		setInvalidToken(ctx)
 		return
 	}
