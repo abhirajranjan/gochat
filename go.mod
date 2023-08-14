@@ -13,6 +13,11 @@ require (
 require github.com/golang-jwt/jwt/v5 v5.0.0
 
 require (
+	github.com/mattn/go-sqlite3 v1.14.17 // indirect
+	gorm.io/driver/sqlite v1.5.2 // indirect
+)
+
+require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/go-sql-driver/mysql v1.7.0 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
