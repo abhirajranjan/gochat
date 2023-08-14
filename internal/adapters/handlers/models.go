@@ -1,9 +1,9 @@
 package handlers
 
 type Credential struct {
-	token string
+	Token string `json:"token"`
 }
 
-func (c Credential) Token() string {
-	return c.token
+func (c Credential) GetToken() string {
+	return c.Token
 }
