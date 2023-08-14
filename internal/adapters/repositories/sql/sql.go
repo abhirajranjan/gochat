@@ -20,6 +20,8 @@ func NewSqlRepository(cfg config.SqlConfig, dialector gorm.Dialector, opts ...go
 		return nil, err
 	}
 
+	conn.AutoMigrate(&User{}, &UserChannels{}, &Messages{}, &Channel{})
+
 	return &sqlRepo{
 		config: cfg,
 		conn:   conn,
