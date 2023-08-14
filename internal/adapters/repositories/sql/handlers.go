@@ -32,6 +32,8 @@ func (r *sqlRepo) CreateIfNotFound(user *domain.User) error {
 		return res.Error
 	}
 
+	user.UserID = int64(u.Model.ID)
+
 	return nil
 }
 
