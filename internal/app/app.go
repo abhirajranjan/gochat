@@ -2,9 +2,10 @@ package app
 
 import (
 	"context"
+	"fmt"
 	"gochat/config"
 	"gochat/internal/core/ports"
-	"gochat/logger"
+	"log"
 	"net/http"
 	"time"
 
@@ -12,13 +13,12 @@ import (
 )
 
 type ginServer struct {
-	logger     logger.ILogger
 	handler    ports.Handler
 	engine     *gin.Engine
 	httpServer *http.Server
 }
 
-func NewServer(config config.AppConfig, srvhandler ports.Handler, logger logger.ILogger) *ginServer {
+func NewServer(config config.AppConfig, srvhandler ports.Handler) *ginServer {
 	ginRouter := gin.New()
 	server := ginServer{
 		handler: srvhandler,
@@ -47,7 +47,7 @@ func (s *ginServer) Start() {
 	go func() {
 		// always returns non nil error
 		if err := s.httpServer.ListenAndServe(); err != http.ErrServerClosed {
-			s.logger.Errorf("server listen: %w", err)
+			log.Fatal(fmt.Errorf("server listen: %w", err))
 		}
 	}()
 }
@@ -57,6 +57,6 @@ func (s *ginServer) Stop(ctx context.Context) {
 	defer cancel()
 
 	if err := s.httpServer.Shutdown(ctx); err != nil {
-		s.logger.WarnMsg("server listen", err)
+		log.Println("server listen", err)
 	}
 }
