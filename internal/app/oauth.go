@@ -7,5 +7,5 @@ import (
 )
 
 func initOAuth(router *gin.RouterGroup, handler ports.Handler) {
-	router.GET("/", handler.HandleGoogleAuth)
+	router.POST("/", handler.HandleGoogleAuth)
 }
