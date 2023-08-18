@@ -12,4 +12,5 @@ func initMessageRoute(route *gin.RouterGroup, handler ports.Handler) {
 	route.GET("/:channelid", handler.GetMessagesFromChannel)
 	// post a new message to channel
 	route.POST("/:channelid", handler.PostMessageInChannel)
+	route.POST("/:channelid/join", handler.JoinChannel)
 }

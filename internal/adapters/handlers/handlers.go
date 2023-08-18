@@ -1,22 +1,24 @@
 package handlers
 
 import (
-	"fmt"
-	"gochat/config"
-	"gochat/internal/core/domain"
-	"gochat/internal/core/ports"
-	"gochat/logger"
-	"net/http"
-	"strconv"
-
-	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/gorilla/websocket"
-	"github.com/pkg/errors"
+
+	"gochat/config"
+	"gochat/internal/core/ports"
 )
 
+const NAMETAGKEY = "NAMETAG"
+const JWT_ISSUER = "connector/auth"
+
+type logger interface {
+	Debug(args ...interface{})
+	Debugf(template string, args ...interface{})
+	Errorf(template string, args ...interface{})
+}
+
 type handler struct {
-	logger  logger.ILogger
+	logger  logger
 	service ports.Service
 
 	wsUpgrader *websocket.Upgrader
@@ -28,7 +30,7 @@ type handler struct {
 // handler implements ports.Handler
 var _ ports.Handler = (*handler)(nil)
 
-func NewHandler(config config.JwtConfig, s ports.Service, l logger.ILogger) *handler {
+func NewHandler(config config.JwtConfig, s ports.Service, l logger) *handler {
 	return &handler{
 		logger:    l,
 		service:   s,
@@ -41,116 +43,20 @@ func NewHandler(config config.JwtConfig, s ports.Service, l logger.ILogger) *han
 	}
 }
 
-// returns recent user messages
-func (h *handler) GetUserMessages(ctx *gin.Context) {
-	userid := ctx.GetInt64("userId")
-	if userid == 0 {
-		h.logger.Errorf("GetUserMessages: %w", errors.Errorf("error getting userid"))
-		setInternalServerError(ctx)
-		return
+func (h *handler) Debug(args ...interface{}) {
+	if h.logger != nil {
+		h.logger.Debug(args...)
 	}
-
-	channelbanner, err := h.service.GetUserMessages(userid)
-	if err != nil {
-		h.logger.Error(err)
-		setInternalServerError(ctx)
-		return
-	}
-
-	ctx.JSON(http.StatusOK, channelbanner)
 }
 
-// extract messages from channels
-func (h *handler) GetMessagesFromChannel(ctx *gin.Context) {
-	channelid_string := ctx.Params.ByName("channelid")
-	if channelid_string == "" {
-		h.logger.Debug("GetMessagesFromChannel: no channelid passed")
-		setBadRequest(ctx)
-		return
+func (h *handler) Debugf(template string, args ...interface{}) {
+	if h.logger != nil {
+		h.logger.Debugf(template, args...)
 	}
-
-	channelid, err := strconv.Atoi(channelid_string)
-	if err != nil {
-		h.logger.Debugf("GetMessagesFromChannel: strconv.Atoi: %w", err)
-		setBadRequest(ctx)
-		return
-	}
-
-	channelMessages, err := h.service.GetMessagesFromChannel(int64(channelid))
-	if err != nil {
-		h.logger.Debugf("GetMessagesFromChannel: %w", err)
-		setInternalServerError(ctx)
-		return
-	}
-
-	ctx.JSON(http.StatusOK, channelMessages)
 }
 
-// post a new message to channel
-func (h *handler) PostMessageInChannel(ctx *gin.Context) {
-	// extract user info set by middlewares
-	userid := ctx.GetInt64("userId")
-	if userid == 0 {
-		h.logger.Errorf("GetUserMessages: %w", errors.Errorf("error getting userid"))
-		setInternalServerError(ctx)
-		return
-	}
-
-	channelid_string := ctx.Params.ByName("channelid")
-	if channelid_string == "" {
-		h.logger.Debug("PostMessageInChannel: no channelid passed")
-		setBadRequest(ctx)
-		return
-	}
-
-	channelid, err := strconv.Atoi(channelid_string)
-	if err != nil {
-		h.logger.Debugf("PostMessageInChannel: strconv.Atoi: %w", err)
-		setBadRequest(ctx)
-		return
-	}
-
-	var message domain.Message
-	if err := ctx.BindJSON(&message); err != nil {
-		h.logger.Debugf("PostMessageInChannel: ctx.Bind: %w", err)
-		return
-	}
-
-	if len(message.Content) == 0 || message.UserId == 0 {
-		h.logger.Debugf("PostMessageInChannel: invalid credential provided %#v", message)
-		setBadRequest(ctx)
-		return
-	}
-
-	if message.UserId != userid {
-		h.logger.Debugf("PostMessageInChannel: request sender [%d] does not match with message embeded user [%d]", userid, message.UserId)
-		setBadRequestWithErr(ctx, fmt.Errorf("request sender does not match with message embeded user"))
-		return
-	}
-
-	msg, err := h.service.PostMessageInChannel(int64(channelid), &message)
-	if err != nil {
-		h.logger.Debugf("PostMessageInChannel: %w", err)
-		setInternalServerError(ctx)
-		return
-	}
-
-	ctx.JSON(http.StatusOK, msg.Id)
-}
-
-func (h *handler) HandleWS(ctx *gin.Context) {
-	// upgrade connection to websocket
-	conn, err := h.wsUpgrader.Upgrade(ctx.Writer, ctx.Request, nil)
-	if err != nil {
-		// in case of error, websocket upgrade automatically
-		// write the error to writer with status code
-		h.logger.Errorf("ws upgrade: %w", err)
-		setInternalServerError(ctx)
-	}
-
-	if err := h.service.HandleWS(conn); err != nil {
-		h.logger.Errorf("handleWS: %w", err)
-		setInternalServerError(ctx)
-		return
+func (h handler) Errorf(template string, args ...interface{}) {
+	if h.logger != nil {
+		h.logger.Errorf(template, args...)
 	}
 }

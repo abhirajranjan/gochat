@@ -49,7 +49,7 @@ func (j JwtModel) GetAudience() (jwt.ClaimStrings, error) {
 
 type SessionJwtModel struct {
 	JwtModel
-	UserID     int64  `json:"userid"`
+	NameTag    string `json:"nametag"`
 	GivenName  string `json:"given_name"`
 	FamilyName string `json:"family_name"`
 	Email      string `json:"email"`

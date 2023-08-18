@@ -10,7 +10,7 @@ import (
 	"gochat/config"
 	"gochat/config/parser"
 	"gochat/internal/adapters/handlers"
-	"gochat/internal/adapters/repositories/sql"
+	"gochat/internal/adapters/repositories/sqlite"
 	"gochat/internal/app"
 	"gochat/internal/core/services"
 	"gochat/logger"
@@ -29,16 +29,17 @@ func main() {
 	log.Printf("loaded config: %+v\n", cfg)
 
 	applogger := logger.NewLogger(cfg.Logger)
+	applogger.AddWriter(os.Stdout)
 	applogger.InitLogger()
 
-	repo, err := sql.NewMySqlRepository(cfg.Sql)
+	repo, err := sqlite.NewSqliteRepository(cfg.Sql)
 	if err != nil {
 		applogger.Panic(err)
 	}
 
 	service := services.NewService(repo)
 	handler := handlers.NewHandler(cfg.Jwt, service, applogger)
-	server := app.NewServer(cfg.App, handler, applogger)
+	server := app.NewServer(cfg.App, handler)
 
 	server.Start()
 

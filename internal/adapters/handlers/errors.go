@@ -26,3 +26,7 @@ func setBadRequest(ctx *gin.Context) {
 func setBadRequestWithErr(ctx *gin.Context, err error) {
 	ctx.AbortWithError(http.StatusBadRequest, err)
 }
+
+func setForbidden(ctx *gin.Context) {
+	ctx.AbortWithStatus(http.StatusForbidden)
+}

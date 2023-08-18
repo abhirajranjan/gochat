@@ -6,10 +6,17 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+const USERID_SEP = "@"
+
 type Service interface {
-	LoginRequest(c domain.LoginRequest) (*domain.User, error)
 	HandleWS(*websocket.Conn) error
-	GetUserMessages(userId int64) ([]domain.ChannelBanner, error)
-	GetMessagesFromChannel(channelid int64) (*domain.ChannelMessages, error)
-	PostMessageInChannel(channelid int64, message *domain.Message) (*domain.Message, error)
+
+	LoginRequest(domain.LoginRequest) (*domain.User, error)
+	DeleteUser(userid string) error
+	GetUserMessages(userid string) ([]domain.ChannelBanner, error)
+
+	JoinChannel(userid string, channelid int64) error
+	DeleteChannel(userid string, channelid int64) error
+	GetMessagesFromChannel(userid string, channelid int64) (*domain.ChannelMessages, error)
+	PostMessageInChannel(userid string, channelid int64, message *domain.Message) (*domain.Message, error)
 }

@@ -7,14 +7,11 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strconv"
-	"strings"
 	"testing"
 	"time"
 
-	"gochat/config"
 	"gochat/internal/core/domain"
 	"gochat/internal/core/ports"
-	"gochat/logger"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
@@ -28,15 +25,12 @@ var (
 	h        handler
 	w        *httptest.ResponseRecorder
 	c        *gin.Context
-	writer   strings.Builder
 )
 
 func init() {
 	gin.SetMode(gin.ReleaseMode)
 	mockserv = new(MockServices)
-	writer = strings.Builder{}
 	h = handler{
-		logger:  MockLogger(&writer),
 		service: mockserv,
 	}
 }
@@ -47,14 +41,14 @@ type MockServices struct {
 
 var _ ports.Service = (*MockServices)(nil)
 
-func (m *MockServices) LoginRequest(c domain.LoginRequest) (*domain.User, error) {
-	args := m.Called(c)
-	return args.Get(0).(*domain.User), args.Error(1)
-}
-
 func (m *MockServices) HandleWS(w *websocket.Conn) error {
 	args := m.Called(w)
 	return args.Error(0)
+}
+
+func (m *MockServices) LoginRequest(c domain.LoginRequest) (*domain.User, error) {
+	args := m.Called(c)
+	return args.Get(0).(*domain.User), args.Error(1)
 }
 
 func (m *MockServices) GetUserMessages(userId int64) ([]domain.ChannelBanner, error) {
@@ -70,18 +64,6 @@ func (m *MockServices) GetMessagesFromChannel(channelid int64) (*domain.ChannelM
 func (m *MockServices) PostMessageInChannel(channelid int64, message *domain.Message) (*domain.Message, error) {
 	args := m.Called(channelid, message)
 	return args.Get(0).(*domain.Message), args.Error(1)
-}
-
-func MockLogger(writer io.Writer) logger.ILogger {
-	l := logger.NewLogger(config.LoggerConfig{
-		AppName: "test",
-		Level:   "debug",
-		Dev:     true,
-		Encoder: "json",
-	})
-	l.AddWriter(writer)
-	l.InitLogger()
-	return l
 }
 
 func TestGetUserMessages(t *testing.T) {
@@ -139,7 +121,7 @@ func TestGetUserMessages(t *testing.T) {
 			}
 
 			if !assert.Equal(t, tc.wantStatusCode, w.Code) {
-				t.Log(writer.String())
+				t.FailNow()
 			}
 
 			var (
@@ -157,7 +139,6 @@ func TestGetUserMessages(t *testing.T) {
 			actual = w.Body.String()
 
 			assert.Equal(t, string(expectedbytes), actual)
-			writer.Reset()
 		})
 	}
 }
@@ -235,7 +216,7 @@ func TestGetMessagesFromChannel(t *testing.T) {
 			}
 
 			if !assert.Equal(t, tc.wantStatusCode, w.Code) {
-				t.Log(writer.String())
+				t.FailNow()
 			}
 
 			var (
@@ -253,8 +234,9 @@ func TestGetMessagesFromChannel(t *testing.T) {
 
 			actual = w.Body.String()
 
-			assert.Equal(t, string(expectedbytes), actual)
-			writer.Reset()
+			if !assert.Equal(t, string(expectedbytes), actual) {
+				t.FailNow()
+			}
 		})
 	}
 }
@@ -370,7 +352,6 @@ func TestPostMessageInChannel(t *testing.T) {
 				h.PostMessageInChannel(c)
 
 				if !mockserv.AssertExpectations(t) {
-					t.Log(writer.String())
 					t.FailNow()
 				}
 
@@ -380,7 +361,6 @@ func TestPostMessageInChannel(t *testing.T) {
 			}
 
 			if !assert.Equal(t, tc.wantStatusCode, w.Code) {
-				t.Log(writer.String())
 				t.FailNow()
 			}
 
@@ -403,7 +383,6 @@ func TestPostMessageInChannel(t *testing.T) {
 				t.Logf("%s %s", string(expectedbytes), actual)
 				t.FailNow()
 			}
-			writer.Reset()
 		})
 	}
 }

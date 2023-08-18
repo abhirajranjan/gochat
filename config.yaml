@@ -1,14 +1,14 @@
 app:
     # addr for server localhost:8080
-    addr: 
+    addr: localhost:1212
 sql:
     # dsn remote connection url
-    dsn: 
+    dsn: "test.db"
     # max sql query execution time  
     sqltimeout: 5s
 jwt:
     # jwt hashing key
-    key:
+    key: abhirajranjan
     # jet expiry time
     expiry: 5h
 logger:

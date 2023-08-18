@@ -10,16 +10,18 @@ type LoginRequest struct {
 	Picture     string
 	Given_name  string
 	Family_name string
+	Sub         string
 }
 
 // user model
 
 type User struct {
-	UserID     int64
+	ID         string
 	GivenName  string
 	FamilyName string
 	Email      string
 	Picture    string
+	NameTag    string
 }
 
 // channel models
@@ -34,7 +36,7 @@ const (
 
 type Message struct {
 	Id      int64
-	UserId  int64
+	UserId  string
 	At      time.Time
 	Type    MessageType
 	Content []byte `json:",string"`
