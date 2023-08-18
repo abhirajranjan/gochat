@@ -3,14 +3,14 @@ package domain
 import "github.com/golang-jwt/jwt/v5"
 
 type JwtModel struct {
-	Iss string
-	Aud jwt.ClaimStrings
-	Sub string
-	Azp string
-	Jti string
-	Exp *jwt.NumericDate
-	Nbf *jwt.NumericDate
-	Iat *jwt.NumericDate
+	Iss string           `json:"iss"`
+	Aud jwt.ClaimStrings `json:"aud"`
+	Sub string           `json:"sub"`
+	Azp string           `json:"azp"`
+	Jti string           `json:"jti"`
+	Exp *jwt.NumericDate `json:"exp"`
+	Nbf *jwt.NumericDate `json:"nbf"`
+	Iat *jwt.NumericDate `json:"iat"`
 }
 
 type GoogleJWTModel struct {

@@ -3,8 +3,6 @@ package sql
 import (
 	"gochat/internal/core/domain"
 	"time"
-
-	"gorm.io/gorm"
 )
 
 type User struct {
@@ -28,7 +26,10 @@ type UserChannels struct {
 }
 
 type Messages struct {
-	gorm.Model
+	ID        int64 `gorm:"primarykey"`
+	CreatedAt time.Time
+	UpdatedAt time.Time
+
 	UserID    string `gorm:"not null"`
 	ChannelID int64  `gorm:"not null"`
 	Content   []byte `gorm:"not null"`
@@ -36,7 +37,9 @@ type Messages struct {
 }
 
 type Channel struct {
-	gorm.Model
+	ID        int64 `gorm:"primarykey"`
+	CreatedAt time.Time
+	UpdatedAt time.Time
 	CreatedBy int64
 	Name      string
 	Picture   string

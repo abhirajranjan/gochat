@@ -4,10 +4,8 @@ import (
 	"gochat/internal/core/domain"
 	"gochat/internal/core/ports"
 	"net/http"
-	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/pkg/errors"
 )
 
@@ -16,7 +14,6 @@ func (h *handler) HandleGoogleAuth(ctx *gin.Context) {
 		cred         Credential
 		claims       domain.GoogleJWTModel
 		loginRequest domain.LoginRequest
-		sessionjwt   domain.SessionJwtModel
 	)
 
 	if err := ctx.Bind(&cred); err != nil {
@@ -31,7 +28,7 @@ func (h *handler) HandleGoogleAuth(ctx *gin.Context) {
 
 	h.Debugf("HandleGoogleAuth %s", cred.Token)
 
-	_, _, err := h.jwtParser.ParseUnverified(cred.GetToken(), &claims)
+	_, _, err := h.parseUnverified(cred.GetToken(), &claims)
 	if err != nil {
 		h.Debugf("jwtParser: %w", err)
 		setInvalidToken(ctx)
@@ -57,24 +54,7 @@ func (h *handler) HandleGoogleAuth(ctx *gin.Context) {
 		return
 	}
 
-	sessionjwt = domain.SessionJwtModel{
-		JwtModel: domain.JwtModel{
-			Iss: JWT_ISSUER,
-			Aud: []string{user.NameTag},
-			Sub: user.ID,
-			Nbf: jwt.NewNumericDate(time.Now()),
-			Exp: jwt.NewNumericDate(time.Now().Add(h.config.Expiry)),
-		},
-
-		NameTag:    user.NameTag,
-		GivenName:  user.GivenName,
-		FamilyName: user.FamilyName,
-		Email:      user.Email,
-		Picture:    user.Picture,
-	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, sessionjwt)
-	jwt, err := token.SignedString([]byte(h.config.Key))
+	jwt, err := h.generateSessionJwt(user)
 	if err != nil {
 		h.Errorf("token.SignedString: %w", err)
 		setInternalServerError(ctx)

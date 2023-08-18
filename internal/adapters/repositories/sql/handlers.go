@@ -21,9 +21,7 @@ func (r *sqlRepo) ValidChannel(channelid int64) (bool, error) {
 	if res := r.conn.WithContext(ctx).
 		Model(&Channel{}).
 		Where(&Channel{
-			Model: gorm.Model{
-				ID: uint(channelid),
-			},
+			ID: channelid,
 		}).
 		Count(&count); res.Error != nil {
 		return false, res.Error
@@ -96,9 +94,7 @@ func (r *sqlRepo) DeleteChannel(channelid int64) error {
 
 	if res := tx.Model(&Channel{}).
 		Delete(&Channel{
-			Model: gorm.Model{
-				ID: uint(channelid),
-			},
+			ID: channelid,
 		}); res.Error != nil {
 		return errors.Wrap(res.Error, "gorm.Delete")
 	}
@@ -227,20 +223,6 @@ func (r *sqlRepo) GetChannelMessages(channelid int64) (*domain.ChannelMessages, 
 
 	return &channelmessages, nil
 }
-
-// func (r *sqlRepo) validUser(userid string) (bool, error) {
-// 	var user User
-
-// 	ctx, cancel := r.getContextWithTimeout(context.Background())
-// 	defer cancel()
-
-// 	tx := r.conn.WithContext(ctx)
-// 	if res := tx.First(&user, userid); res.Error != nil {
-// 		return false, res.Error
-// 	}
-
-// 	return true, nil
-// }
 
 func (r *sqlRepo) getContextWithTimeout(ctx context.Context) (context.Context, context.CancelFunc) {
 	return context.WithTimeout(ctx, r.config.SqlTimeout)

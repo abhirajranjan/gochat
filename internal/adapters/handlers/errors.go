@@ -7,9 +7,9 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func setUnauthorised(ctx *gin.Context) {
-	ctx.AbortWithStatus(http.StatusUnauthorized)
-}
+// func setUnauthorised(ctx *gin.Context) {
+// 	ctx.AbortWithStatus(http.StatusUnauthorized)
+// }
 
 func setInvalidToken(ctx *gin.Context) {
 	ctx.AbortWithError(http.StatusBadRequest, fmt.Errorf("%s", "invalid token"))
