@@ -7,10 +7,12 @@ import (
 )
 
 // init /messages endpoint
-func initMessageRoute(route *gin.RouterGroup, handler ports.Handler) {
-	// get messages of channel
-	route.GET("/:channelid", handler.GetMessagesFromChannel)
-	// post a new message to channel
-	route.POST("/:channelid", handler.PostMessageInChannel)
-	route.POST("/:channelid/join", handler.JoinChannel)
+func initMessageRoute(router *gin.Engine, handler ports.Handler) {
+	router.GET("/ws", handler.AuthMiddleware, handler.HandleWS)
+	channel := router.Group("/channel", handler.AuthMiddleware)
+
+	channel.GET("/:channelid", handler.GetMessagesFromChannel)
+	channel.POST("/:channelid", handler.PostMessageInChannel)
+	channel.POST("/:channelid/join", handler.JoinChannel)
+	channel.DELETE("/:channelid", handler.DeleteChannel)
 }
