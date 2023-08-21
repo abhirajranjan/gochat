@@ -10,12 +10,16 @@ type Handler interface {
 	// Delete User
 	DeleteUser(*gin.Context)
 
+	// all below have channelid as parameter
+	//
 	// get messages from channel
 	GetMessagesFromChannel(*gin.Context)
 	// post a message to channel
 	PostMessageInChannel(*gin.Context)
 	// User join channel
 	JoinChannel(*gin.Context)
+	// Create New Channel
+	NewChannel(*gin.Context)
 	// Delete Channel
 	DeleteChannel(*gin.Context)
 

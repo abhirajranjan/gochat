@@ -12,7 +12,8 @@ func initMessageRoute(router *gin.Engine, handler ports.Handler) {
 	channel := router.Group("/channel", handler.AuthMiddleware)
 
 	channel.GET("/:channelid", handler.GetMessagesFromChannel)
-	channel.POST("/:channelid", handler.PostMessageInChannel)
+	channel.POST("/:channelid", handler.NewChannel)
+	channel.POST("/:channelid/message", handler.PostMessageInChannel)
 	channel.POST("/:channelid/join", handler.JoinChannel)
 	channel.DELETE("/:channelid", handler.DeleteChannel)
 }

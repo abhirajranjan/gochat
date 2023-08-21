@@ -113,7 +113,11 @@ func (h *handler) DeleteChannel(ctx *gin.Context) {
 	ctx.Status(http.StatusOK)
 }
 
-func extractChannelId(ctx *gin.Context) (int64, error) {
+func (h *handler) NewChannel(ctx *gin.Context) {
+	ctx.Status(http.StatusNotImplemented)
+}
+
+func extractChannelId(ctx *gin.Context) (int, error) {
 	channelid_string := ctx.Params.ByName("channelid")
 	if channelid_string == "" {
 		return 0, errors.New("no channelid passed")
@@ -123,5 +127,5 @@ func extractChannelId(ctx *gin.Context) (int64, error) {
 	if err != nil {
 		return 0, errors.Wrap(err, "strconv.Atoi")
 	}
-	return int64(channelid), nil
+	return channelid, nil
 }

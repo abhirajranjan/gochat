@@ -15,6 +15,14 @@ type LoginRequest struct {
 
 // user model
 
+type UserProfile struct {
+	ID         string
+	GivenName  string
+	FamilyName string
+	Picture    string
+	NameTag    string
+}
+
 type User struct {
 	ID         string
 	GivenName  string
@@ -35,28 +43,30 @@ const (
 )
 
 type Message struct {
-	Id      int64
-	UserId  string
+	Id      int
+	User    UserProfile
 	At      time.Time
 	Type    MessageType
 	Content []byte `json:",string"`
 }
 
 type Channel struct {
-	ChannelBanner
+	Id        int64
+	Name      string
+	Picture   string
 	Users     []User
 	CreatedBy User
 	Messages  []Message
 }
 
 type ChannelBanner struct {
-	Id            int64
+	Id            int
 	Name          string
 	Picture       string
 	RecentMessage Message
 }
 
 type ChannelMessages struct {
-	Id       int64 // channel id
+	Id       int // channel id
 	Messages []Message
 }

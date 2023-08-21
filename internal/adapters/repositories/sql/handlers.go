@@ -10,7 +10,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func (r *sqlRepo) ValidChannel(channelid int64) (bool, error) {
+func (r *sqlRepo) ValidChannel(channelid int) (bool, error) {
 	var (
 		count int64
 	)
@@ -34,7 +34,7 @@ func (r *sqlRepo) ValidChannel(channelid int64) (bool, error) {
 	return true, nil
 }
 
-func (r *sqlRepo) UserJoinChannel(userid string, channelid int64) error {
+func (r *sqlRepo) UserJoinChannel(userid string, channelid int) error {
 	ctx, cancel := r.getContextWithTimeout(context.Background())
 	defer cancel()
 
@@ -58,7 +58,7 @@ func (r *sqlRepo) UserJoinChannel(userid string, channelid int64) error {
 	return nil
 }
 
-func (r *sqlRepo) UserinChannel(userid string, channelid int64) (ok bool, err error) {
+func (r *sqlRepo) UserinChannel(userid string, channelid int) (ok bool, err error) {
 	var userchan UserChannels
 
 	ctx, cancel := r.getContextWithTimeout(context.Background())
@@ -79,7 +79,7 @@ func (r *sqlRepo) UserinChannel(userid string, channelid int64) (ok bool, err er
 	return false, errors.New("record found yet empty")
 }
 
-func (r *sqlRepo) DeleteChannel(channelid int64) error {
+func (r *sqlRepo) DeleteChannel(channelid int) error {
 	ctx, cancel := r.getContextWithTimeout(context.Background())
 	defer cancel()
 
@@ -102,9 +102,9 @@ func (r *sqlRepo) DeleteChannel(channelid int64) error {
 	return nil
 }
 
-func (r *sqlRepo) PostMessageInChannel(channelid int64, m *domain.Message) error {
+func (r *sqlRepo) PostMessageInChannel(channelid int, m *domain.Message) error {
 	message := &Messages{
-		UserID:    m.UserId,
+		UserID:    m.User.ID,
 		ChannelID: channelid,
 		Content:   m.Content,
 		Type:      m.Type,
@@ -162,38 +162,43 @@ func (r *sqlRepo) DeleteIfExistsUser(userid string) error {
 }
 
 func (r *sqlRepo) GetUserChannels(userid string) ([]domain.ChannelBanner, error) {
-	var arrChannelBanner []domain.ChannelBanner
+	var channelbanner []domain.ChannelBanner
+
 	ctx, cancel := r.getContextWithTimeout(context.Background())
 	defer cancel()
 
 	tx := r.conn.WithContext(ctx)
-	res := tx.Model(&UserChannels{}).
-		Joins("JOINS channel AS c ON c.id = user_channels.channel_id AND user.id = ?", userid).
-		Select("c.id, c.name, c.picture")
 
-	rows, err := res.Rows()
-
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, nil
-	} else if err != nil {
-		return nil, err
+	banner, err := getUserChannelswithMessage(tx, userid)
+	if err != nil {
+		return nil, errors.Wrap(err, "getUserChannelswithMessage")
 	}
 
-	arrChannelBanner = make([]domain.ChannelBanner, res.RowsAffected)
-	{
-		i := 0
-		for rows.Next() {
-			if err := rows.Scan(&arrChannelBanner[i]); err != nil {
-				return nil, errors.Wrap(err, "GetUserChannels: rows.Scan")
-			}
-			i++
+	channelbanner = make([]domain.ChannelBanner, len(banner))
+	for idx, b := range banner {
+		channelbanner[idx] = domain.ChannelBanner{
+			Id:      b.Channel_id,
+			Name:    b.Channel_name,
+			Picture: b.Channel_picture,
+			RecentMessage: domain.Message{
+				Id:      b.Message_id,
+				At:      b.Message_created_at,
+				Type:    domain.MessageType(b.Message_type),
+				Content: b.Message_content,
+				User: domain.UserProfile{
+					ID:         b.User_id,
+					GivenName:  b.User_given_name,
+					FamilyName: b.User_family_name,
+					Picture:    b.User_picture,
+					NameTag:    b.User_name_tag,
+				},
+			},
 		}
 	}
-
-	return arrChannelBanner, nil
+	return channelbanner, nil
 }
 
-func (r *sqlRepo) GetChannelMessages(channelid int64) (*domain.ChannelMessages, error) {
+func (r *sqlRepo) GetChannelMessages(channelid int) (*domain.ChannelMessages, error) {
 	channelmessages := domain.ChannelMessages{
 		Id: channelid,
 	}

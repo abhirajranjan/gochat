@@ -6,7 +6,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (s *service) JoinChannel(userid string, channelid int64) error {
+func (s *service) JoinChannel(userid string, channelid int) error {
 	if err := isValidChannel(channelid, s.repo.ValidChannel); err != nil {
 		return err
 	}
@@ -27,7 +27,7 @@ func (s *service) JoinChannel(userid string, channelid int64) error {
 	return nil
 }
 
-func (s *service) DeleteChannel(userid string, channelid int64) error {
+func (s *service) DeleteChannel(userid string, channelid int) error {
 	if err := isValidChannel(channelid, s.repo.ValidChannel); err != nil {
 		return err
 	}
@@ -47,7 +47,7 @@ func (s *service) DeleteChannel(userid string, channelid int64) error {
 	return nil
 }
 
-func (s *service) GetMessagesFromChannel(userid string, channelid int64) (*domain.ChannelMessages, error) {
+func (s *service) GetMessagesFromChannel(userid string, channelid int) (*domain.ChannelMessages, error) {
 	if err := isValidChannel(channelid, s.repo.ValidChannel); err != nil {
 		return nil, err
 	}
@@ -68,7 +68,7 @@ func (s *service) GetMessagesFromChannel(userid string, channelid int64) (*domai
 	return channelmsg, nil
 }
 
-func (s *service) PostMessageInChannel(userid string, channelid int64, message *domain.Message) (*domain.Message, error) {
+func (s *service) PostMessageInChannel(userid string, channelid int, message *domain.Message) (*domain.Message, error) {
 	if err := isValidChannel(channelid, s.repo.ValidChannel); err != nil {
 		return nil, err
 	}
@@ -85,7 +85,7 @@ func (s *service) PostMessageInChannel(userid string, channelid int64, message *
 		return nil, ErrCannotBeEmpty("message")
 	}
 
-	message.UserId = userid
+	message.User = domain.UserProfile{ID: userid}
 
 	if err := s.repo.PostMessageInChannel(channelid, message); err != nil {
 		return nil, errors.Wrap(err, "PostMessageInChannel")
@@ -94,7 +94,7 @@ func (s *service) PostMessageInChannel(userid string, channelid int64, message *
 	return message, nil
 }
 
-func isValidChannel(channelid int64, validChannel func(channelid int64) (bool, error)) error {
+func isValidChannel(channelid int, validChannel func(channelid int) (bool, error)) error {
 	ok, err := validChannel(channelid)
 	if err != nil {
 		return errors.Wrap(err, "validChannel")

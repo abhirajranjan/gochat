@@ -15,8 +15,8 @@ type Service interface {
 	DeleteUser(userid string) error
 	GetUserMessages(userid string) ([]domain.ChannelBanner, error)
 
-	JoinChannel(userid string, channelid int64) error
-	DeleteChannel(userid string, channelid int64) error
-	GetMessagesFromChannel(userid string, channelid int64) (*domain.ChannelMessages, error)
-	PostMessageInChannel(userid string, channelid int64, message *domain.Message) (*domain.Message, error)
+	JoinChannel(userid string, channelid int) error
+	DeleteChannel(userid string, channelid int) error
+	GetMessagesFromChannel(userid string, channelid int) (*domain.ChannelMessages, error)
+	PostMessageInChannel(userid string, channelid int, message *domain.Message) (*domain.Message, error)
 }

@@ -10,7 +10,7 @@ import (
 	"gochat/config"
 	"gochat/config/parser"
 	"gochat/internal/adapters/handlers"
-	"gochat/internal/adapters/repositories/sqlite"
+	"gochat/internal/adapters/repositories/postgres"
 	"gochat/internal/app"
 	"gochat/internal/core/services"
 	"gochat/logger"
@@ -32,7 +32,7 @@ func main() {
 	applogger.AddWriter(os.Stdout)
 	applogger.InitLogger()
 
-	repo, err := sqlite.NewSqliteRepository(cfg.Sql)
+	repo, err := postgres.NewPostgresRepository(cfg.Sql)
 	if err != nil {
 		applogger.Panic(err)
 	}

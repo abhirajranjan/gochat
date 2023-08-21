@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"fmt"
 	"gochat/internal/core/domain"
 	"strings"
 	"time"
@@ -13,6 +12,7 @@ import (
 
 // injects user information from jwt to context
 func (h *handler) AuthMiddleware(ctx *gin.Context) {
+	// TODO: token expired
 	var session domain.SessionJwtModel
 
 	jwtoken, err := extractTokenFromCtx(ctx)
@@ -76,7 +76,6 @@ func (h *handler) getEncryptionKey(method jwt.SigningMethod) (interface{}, error
 func extractTokenFromCtx(ctx *gin.Context) (id string, err error) {
 	// header based token extraction
 	token := ctx.Request.Header.Get("Authorization")
-	fmt.Printf("%#v", token)
 	b, id, ok := strings.Cut(token, "Bearer ")
 	if !ok {
 		return "", errors.New("No authorization header found")
