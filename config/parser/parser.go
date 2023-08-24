@@ -22,7 +22,7 @@ func Load(cfg any, configfile string) error {
 			return fmt.Errorf("viper.ReadInConfig: %w", err)
 		}
 	}
-	parser.Get("sql.dsn")
+
 	if err := parser.Unmarshal(&cfg, mapstructureHooks()...); err != nil {
 		return fmt.Errorf("viper.Marshal: %w", err)
 	}

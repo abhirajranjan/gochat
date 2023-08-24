@@ -35,10 +35,11 @@ type Messages struct {
 }
 
 type Channel struct {
-	ID        int `gorm:"primarykey"`
+	ID        int `gorm:"primarykey,auto increment"`
 	Name      string
 	Picture   string
 	CreatedBy string
+	Desc      string
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }

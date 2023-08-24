@@ -7,10 +7,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// func setUnauthorised(ctx *gin.Context) {
-// 	ctx.AbortWithStatus(http.StatusUnauthorized)
-// }
-
 func setInvalidToken(ctx *gin.Context) {
 	ctx.AbortWithError(http.StatusBadRequest, fmt.Errorf("%s", "invalid token"))
 }
@@ -23,10 +19,22 @@ func setBadRequest(ctx *gin.Context) {
 	ctx.AbortWithStatus(http.StatusBadRequest)
 }
 
-func setBadRequestWithErr(ctx *gin.Context, err error) {
-	ctx.AbortWithError(http.StatusBadRequest, err)
+func setBadReqWithClientErr(ctx *gin.Context, err error) {
+	clientErrMessage(ctx, http.StatusBadRequest, "DomainError", err)
 }
 
 func setForbidden(ctx *gin.Context) {
 	ctx.AbortWithStatus(http.StatusForbidden)
+}
+
+type errResp struct {
+	Type  string `json:"type"`
+	Error string `json:"error"`
+}
+
+func clientErrMessage(ctx *gin.Context, resp int, errtype string, err error) {
+	ctx.JSON(resp, errResp{
+		Type:  errtype,
+		Error: err.Error(),
+	})
 }

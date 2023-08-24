@@ -8,8 +8,34 @@ import (
 	"github.com/pkg/errors"
 
 	"gochat/internal/core/domain"
-	"gochat/internal/core/ports"
 )
+
+func (h *handler) NewChannel(ctx *gin.Context) {
+	var newchanreq domain.NewChannelRequest
+	userid := ctx.GetString(NAMETAGKEY)
+
+	if err := ctx.BindQuery(&newchanreq); err != nil {
+		h.logger.Debugf("ctx.Bind: %w", err)
+		setBadRequest(ctx)
+		return
+	}
+
+	h.logger.Debugf("query: %#v", newchanreq)
+
+	channel, err := h.service.NewChannel(userid, newchanreq)
+	var errdomain domain.ErrDomain
+	if errors.As(err, &errdomain) {
+		h.logger.Debugf("service.NewChannel: %s", err)
+		setBadReqWithClientErr(ctx, errdomain)
+		return
+	} else if err != nil {
+		h.logger.Errorf("service.NewChannel: %w", err)
+		setInternalServerError(ctx)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, channel)
+}
 
 // extract messages from channels
 func (h *handler) GetMessagesFromChannel(ctx *gin.Context) {
@@ -77,8 +103,9 @@ func (h *handler) JoinChannel(ctx *gin.Context) {
 	}
 
 	err = h.service.JoinChannel(userid, channelid)
-	if errors.Is(err, ports.ErrDomain) {
-		setBadRequestWithErr(ctx, err)
+	var errdomain domain.ErrDomain
+	if errors.Is(err, &errdomain) {
+		setBadReqWithClientErr(ctx, errdomain)
 		return
 	} else if err != nil {
 		h.Errorf("JoinChannel: service.JoinChannel: %w", err)
@@ -100,9 +127,10 @@ func (h *handler) DeleteChannel(ctx *gin.Context) {
 	}
 
 	err = h.service.DeleteChannel(userid, channelid)
-	if errors.Is(err, ports.ErrDomain) {
+	var errdomain domain.ErrDomain
+	if errors.As(err, &errdomain) {
 		h.Debugf("service.DeleteChannel: %w", err)
-		setBadRequestWithErr(ctx, err)
+		setBadReqWithClientErr(ctx, errdomain)
 		return
 	} else if err != nil {
 		h.Errorf("service.DeleteChannel: %w", err)
@@ -111,10 +139,6 @@ func (h *handler) DeleteChannel(ctx *gin.Context) {
 	}
 
 	ctx.Status(http.StatusOK)
-}
-
-func (h *handler) NewChannel(ctx *gin.Context) {
-	ctx.Status(http.StatusNotImplemented)
 }
 
 func extractChannelId(ctx *gin.Context) (int, error) {

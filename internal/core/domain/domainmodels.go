@@ -3,7 +3,6 @@ package domain
 import "time"
 
 // login request model
-
 type LoginRequest struct {
 	Email       string
 	Name        string
@@ -11,6 +10,13 @@ type LoginRequest struct {
 	Given_name  string
 	Family_name string
 	Sub         string
+}
+
+// new channel request model
+type NewChannelRequest struct {
+	Name    string `json:"name" form:"name"`
+	Picture string `json:"picture" form:"picture"`
+	Desc    string `json:"desc" form:"desc"`
 }
 
 // user model
@@ -43,30 +49,30 @@ const (
 )
 
 type Message struct {
-	Id      int
-	User    UserProfile
-	At      time.Time
-	Type    MessageType
-	Content []byte `json:",string"`
+	Id      int         `json:"id"`
+	User    UserProfile `json:"user"`
+	At      time.Time   `json:"at"`
+	Type    MessageType `json:"type"`
+	Content []byte      `json:",string"`
 }
 
 type Channel struct {
-	Id        int64
-	Name      string
-	Picture   string
-	Users     []User
-	CreatedBy User
-	Messages  []Message
+	Id        int    `json:"id"`
+	Name      string `json:"name"`
+	Desc      string `json:"desc"`
+	Picture   string `json:"picture"`
+	CreatedBy string `json:"created_by"`
 }
 
 type ChannelBanner struct {
-	Id            int
-	Name          string
-	Picture       string
-	RecentMessage Message
+	Id            int     `json:"id"`
+	Name          string  `json:"name"`
+	Picture       string  `json:"picture"`
+	RecentMessage Message `json:"message"`
 }
 
 type ChannelMessages struct {
-	Id       int // channel id
-	Messages []Message
+	ChannelId int    `json:"channel_id"`
+	Nextptr   string `json:"next_ptr"`
+	Messages  []Message
 }

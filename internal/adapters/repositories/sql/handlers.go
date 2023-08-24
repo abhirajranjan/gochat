@@ -3,7 +3,6 @@ package sql
 import (
 	"context"
 	"gochat/internal/core/domain"
-	"gochat/internal/core/ports"
 	"time"
 
 	"github.com/pkg/errors"
@@ -43,7 +42,7 @@ func (r *sqlRepo) UserJoinChannel(userid string, channelid int) error {
 		return err
 	}
 	if !ok {
-		return errors.Wrap(ports.ErrDomain, "channel doesnt exists")
+		return domain.NewErrDomain("channel doesnt exists")
 	}
 
 	if res := r.conn.WithContext(ctx).
@@ -199,9 +198,8 @@ func (r *sqlRepo) GetUserChannels(userid string) ([]domain.ChannelBanner, error)
 }
 
 func (r *sqlRepo) GetChannelMessages(channelid int) (*domain.ChannelMessages, error) {
-	channelmessages := domain.ChannelMessages{
-		Id: channelid,
-	}
+	return nil, errors.New("no implemented")
+	channelmessages := domain.ChannelMessages{}
 	ctx, cancel := r.getContextWithTimeout(context.Background())
 	defer cancel()
 
@@ -227,6 +225,26 @@ func (r *sqlRepo) GetChannelMessages(channelid int) (*domain.ChannelMessages, er
 	}
 
 	return &channelmessages, nil
+}
+
+func (r *sqlRepo) CreateNewChannel(channel *domain.Channel) error {
+	ctx, cancel := r.getContextWithTimeout(context.Background())
+	defer cancel()
+
+	tx := r.conn.WithContext(ctx)
+	querychannel := Channel{
+		Name:      channel.Name,
+		Desc:      channel.Desc,
+		Picture:   channel.Picture,
+		CreatedBy: channel.CreatedBy,
+	}
+
+	if err := tx.Model(&Channel{}).Create(&querychannel).Error; err != nil {
+		return err
+	}
+
+	channel.Id = querychannel.ID
+	return nil
 }
 
 func (r *sqlRepo) getContextWithTimeout(ctx context.Context) (context.Context, context.CancelFunc) {

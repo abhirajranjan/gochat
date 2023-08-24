@@ -6,6 +6,29 @@ import (
 	"github.com/pkg/errors"
 )
 
+func (s *service) NewChannel(userid string, chanreq domain.NewChannelRequest) (*domain.Channel, error) {
+	if chanreq.Name == "" || !isPrintable(chanreq.Name) {
+		return nil, domain.NewErrDomain("invalid name")
+	}
+
+	if !isPrintable(chanreq.Desc) {
+		return nil, domain.NewErrDomain("invalid desc")
+	}
+
+	channel := domain.Channel{
+		Name:      chanreq.Name,
+		Picture:   chanreq.Picture,
+		Desc:      chanreq.Desc,
+		CreatedBy: userid,
+	}
+
+	if err := s.repo.CreateNewChannel(&channel); err != nil {
+		return nil, errors.Wrap(err, "repo.CreateNewChannel")
+	}
+
+	return &channel, nil
+}
+
 func (s *service) JoinChannel(userid string, channelid int) error {
 	if err := isValidChannel(channelid, s.repo.ValidChannel); err != nil {
 		return err
