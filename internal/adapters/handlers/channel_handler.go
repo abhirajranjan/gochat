@@ -29,12 +29,37 @@ func (h *handler) NewChannel(ctx *gin.Context) {
 		setBadReqWithClientErr(ctx, errdomain)
 		return
 	} else if err != nil {
-		h.logger.Errorf("service.NewChannel: %w", err)
+		h.logger.Errorf("service.NewChannel: %s", err)
 		setInternalServerError(ctx)
 		return
 	}
 
 	ctx.JSON(http.StatusOK, channel)
+}
+
+func (h *handler) DeleteChannel(ctx *gin.Context) {
+	userid := ctx.GetString(NAMETAGKEY)
+
+	channelid, err := extractChannelId(ctx)
+	if err != nil {
+		h.Debugf("extractChannelId: %s", err)
+		setBadRequest(ctx)
+		return
+	}
+
+	err = h.service.DeleteChannel(userid, channelid)
+	var errdomain domain.ErrDomain
+	if errors.As(err, &errdomain) {
+		h.Debugf("service.DeleteChannel: %s", err)
+		setBadReqWithClientErr(ctx, errdomain)
+		return
+	} else if err != nil {
+		h.Errorf("service.DeleteChannel: %s", err)
+		setInternalServerError(ctx)
+		return
+	}
+
+	ctx.Status(http.StatusOK)
 }
 
 // extract messages from channels
@@ -43,14 +68,14 @@ func (h *handler) GetMessagesFromChannel(ctx *gin.Context) {
 
 	channelid, err := extractChannelId(ctx)
 	if err != nil {
-		h.Debugf("extractChannelId: %w", err)
+		h.Debugf("extractChannelId: %s", err)
 		setBadRequest(ctx)
 		return
 	}
 
 	channelMessages, err := h.service.GetMessagesFromChannel(userid, channelid)
 	if err != nil {
-		h.Errorf("GetMessagesFromChannel: %w", err)
+		h.Errorf("GetMessagesFromChannel: %s", err)
 		setInternalServerError(ctx)
 		return
 	}
@@ -64,14 +89,14 @@ func (h *handler) PostMessageInChannel(ctx *gin.Context) {
 
 	channelid, err := extractChannelId(ctx)
 	if err != nil {
-		h.Debugf("extractChannelId: %w", err)
+		h.Debugf("extractChannelId: %s", err)
 		setBadRequest(ctx)
 		return
 	}
 
 	var message domain.Message
 	if err := ctx.BindJSON(&message); err != nil {
-		h.Debugf("ctx.Bind: %w", err)
+		h.Debugf("ctx.Bind: %s", err)
 		return
 	}
 
@@ -83,7 +108,7 @@ func (h *handler) PostMessageInChannel(ctx *gin.Context) {
 
 	msg, err := h.service.PostMessageInChannel(userid, channelid, &message)
 	if err != nil {
-		h.Errorf("PostMessageInChannel: %w", err)
+		h.Errorf("PostMessageInChannel: %s", err)
 		setInternalServerError(ctx)
 		return
 	}
@@ -97,7 +122,7 @@ func (h *handler) JoinChannel(ctx *gin.Context) {
 
 	channelid, err := extractChannelId(ctx)
 	if err != nil {
-		h.Debugf("extractChannelId %w", err)
+		h.Debugf("extractChannelId %s", err)
 		setBadRequest(ctx)
 		return
 	}
@@ -108,32 +133,7 @@ func (h *handler) JoinChannel(ctx *gin.Context) {
 		setBadReqWithClientErr(ctx, errdomain)
 		return
 	} else if err != nil {
-		h.Errorf("JoinChannel: service.JoinChannel: %w", err)
-		setInternalServerError(ctx)
-		return
-	}
-
-	ctx.Status(http.StatusOK)
-}
-
-func (h *handler) DeleteChannel(ctx *gin.Context) {
-	userid := ctx.GetString(NAMETAGKEY)
-
-	channelid, err := extractChannelId(ctx)
-	if err != nil {
-		h.Debugf("extractChannelId: %w", err)
-		setBadRequest(ctx)
-		return
-	}
-
-	err = h.service.DeleteChannel(userid, channelid)
-	var errdomain domain.ErrDomain
-	if errors.As(err, &errdomain) {
-		h.Debugf("service.DeleteChannel: %w", err)
-		setBadReqWithClientErr(ctx, errdomain)
-		return
-	} else if err != nil {
-		h.Errorf("service.DeleteChannel: %w", err)
+		h.Errorf("JoinChannel: service.JoinChannel: %s", err)
 		setInternalServerError(ctx)
 		return
 	}

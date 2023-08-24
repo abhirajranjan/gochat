@@ -29,42 +29,38 @@ func (s *service) NewChannel(userid string, chanreq domain.NewChannelRequest) (*
 	return &channel, nil
 }
 
-func (s *service) JoinChannel(userid string, channelid int) error {
-	if err := isValidChannel(channelid, s.repo.ValidChannel); err != nil {
-		return err
-	}
-
-	ok, err := s.repo.UserinChannel(userid, channelid)
+func (s *service) DeleteChannel(userid string, channelid int) error {
+	ok, err := s.repo.ChannelCreatedByUser(userid, channelid)
 	if err != nil {
 		return errors.Wrap(err, "repo.UserinChannel")
 	}
-	if ok {
-		// user already in channel
-		return nil
+	if !ok {
+		return domain.NewErrDomain("permission denied")
 	}
 
-	if err := s.repo.UserJoinChannel(userid, channelid); err != nil {
-		return errors.Wrap(err, "repo.UserJoinChannel")
+	if err := s.repo.DeleteChannel(channelid); err != nil {
+		return errors.Wrap(err, "repo.DeleteChannel")
 	}
 
 	return nil
 }
 
-func (s *service) DeleteChannel(userid string, channelid int) error {
+func (s *service) JoinChannel(userid string, channelid int) error {
 	if err := isValidChannel(channelid, s.repo.ValidChannel); err != nil {
 		return err
 	}
 
-	ok, err := s.repo.UserinChannel(userid, channelid)
-	if err != nil {
-		return errors.Wrap(err, "repo.UserinChannel")
-	}
-	if !ok {
-		return ErrUserNotInChannel
-	}
+	// ok, err := s.repo.UserinChannel(userid, channelid)
+	// if err != nil {
+	// 	return errors.Wrap(err, "repo.UserinChannel")
+	// }
+	// if ok {
+	// 	// user already in channel
+	// 	return nil
+	// }
 
-	if err := s.repo.DeleteChannel(channelid); err != nil {
-		return errors.Wrap(err, "repo.DeleteChannel")
+	if err := s.repo.UserJoinChannel(userid, channelid); err != nil {
+		return errors.Wrap(err, "repo.UserJoinChannel")
 	}
 
 	return nil
@@ -75,13 +71,13 @@ func (s *service) GetMessagesFromChannel(userid string, channelid int) (*domain.
 		return nil, err
 	}
 
-	ok, err := s.repo.UserinChannel(userid, channelid)
-	if err != nil {
-		return nil, errors.Wrap(err, "repo.UserinChannel")
-	}
-	if !ok {
-		return nil, ErrUserNotInChannel
-	}
+	// ok, err := s.repo.UserinChannel(userid, channelid)
+	// if err != nil {
+	// 	return nil, errors.Wrap(err, "repo.UserinChannel")
+	// }
+	// if !ok {
+	// 	return nil, ErrUserNotInChannel
+	// }
 
 	channelmsg, err := s.repo.GetChannelMessages(channelid)
 	if err != nil {
@@ -96,13 +92,13 @@ func (s *service) PostMessageInChannel(userid string, channelid int, message *do
 		return nil, err
 	}
 
-	ok, err := s.repo.UserinChannel(userid, channelid)
-	if err != nil {
-		return nil, errors.Wrap(err, "repo.UserinChannel")
-	}
-	if !ok {
-		return nil, ErrUserNotInChannel
-	}
+	// ok, err := s.repo.UserinChannel(userid, channelid)
+	// if err != nil {
+	// 	return nil, errors.Wrap(err, "repo.UserinChannel")
+	// }
+	// if !ok {
+	// 	return nil, ErrUserNotInChannel
+	// }
 
 	if len(message.Content) == 0 {
 		return nil, ErrCannotBeEmpty("message")

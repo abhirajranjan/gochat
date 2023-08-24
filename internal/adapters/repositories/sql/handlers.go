@@ -9,6 +9,85 @@ import (
 	"gorm.io/gorm"
 )
 
+func (r *sqlRepo) CreateNewChannel(channel *domain.Channel) error {
+	querychannel := Channel{
+		Name:      channel.Name,
+		Desc:      channel.Desc,
+		Picture:   channel.Picture,
+		CreatedBy: channel.CreatedBy,
+	}
+
+	ctx, cancel := r.getContextWithTimeout(context.Background())
+	defer cancel()
+
+	tx := r.conn.WithContext(ctx)
+	if err := tx.Model(&Channel{}).Create(&querychannel).Error; err != nil {
+		return err
+	}
+
+	channel.Id = querychannel.ID
+	return nil
+}
+
+func (r *sqlRepo) DeleteChannel(channelid int) error {
+	ctx, cancel := r.getContextWithTimeout(context.Background())
+	defer cancel()
+
+	tx := r.conn.WithContext(ctx)
+	{
+		cond := &UserChannels{
+			ChannelID: channelid,
+		}
+
+		if err := tx.Delete(&UserChannels{}, cond).Error; err != nil {
+			return errors.Wrap(err, "gorm.Delete")
+		}
+	}
+	{
+		cond := &Messages{
+			ChannelID: channelid,
+		}
+
+		if err := tx.Delete(&Messages{}, &cond).Error; err != nil {
+			return errors.Wrap(err, "gorm.Delete")
+		}
+	}
+	{
+		cond := &Channel{
+			ID: channelid,
+		}
+
+		if err := tx.Delete(&Channel{}, cond).Error; err != nil {
+			return errors.Wrap(err, "gorm.Delete")
+		}
+	}
+	return nil
+}
+
+func (r *sqlRepo) ChannelCreatedByUser(userid string, channelid int) (ok bool, err error) {
+	var (
+		channel Channel
+		cond    = Channel{
+			CreatedBy: userid,
+			ID:        channelid,
+		}
+	)
+
+	ctx, cancel := r.getContextWithTimeout(context.Background())
+	defer cancel()
+
+	tx := r.conn.WithContext(ctx)
+	err = tx.First(&channel, cond).Error
+
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return false, nil
+	} else if err != nil {
+		return false, errors.Wrap(err, "db.First")
+	}
+
+	return true, nil
+}
+
 func (r *sqlRepo) ValidChannel(channelid int) (bool, error) {
 	var (
 		count int64
@@ -52,50 +131,6 @@ func (r *sqlRepo) UserJoinChannel(userid string, channelid int) error {
 			ChannelID: channelid,
 		}); res.Error != nil {
 		return errors.Wrap(res.Error, "gorm.Create")
-	}
-
-	return nil
-}
-
-func (r *sqlRepo) UserinChannel(userid string, channelid int) (ok bool, err error) {
-	var userchan UserChannels
-
-	ctx, cancel := r.getContextWithTimeout(context.Background())
-	defer cancel()
-
-	tx := r.conn.WithContext(ctx)
-	res := tx.First(&userchan, UserChannels{UserID: userid, ChannelID: channelid})
-	if errors.Is(res.Error, gorm.ErrRecordNotFound) {
-		return false, nil
-	} else if res.Error != nil {
-		return false, errors.Wrap(res.Error, "db.First")
-	}
-
-	if userchan.UserID != "" {
-		return true, nil
-	}
-
-	return false, errors.New("record found yet empty")
-}
-
-func (r *sqlRepo) DeleteChannel(channelid int) error {
-	ctx, cancel := r.getContextWithTimeout(context.Background())
-	defer cancel()
-
-	tx := r.conn.WithContext(ctx)
-	if res := tx.
-		Model(&UserChannels{}).
-		Delete(&UserChannels{
-			ChannelID: channelid,
-		}); res.Error != nil {
-		return errors.Wrap(res.Error, "gorm.Delete")
-	}
-
-	if res := tx.Model(&Channel{}).
-		Delete(&Channel{
-			ID: channelid,
-		}); res.Error != nil {
-		return errors.Wrap(res.Error, "gorm.Delete")
 	}
 
 	return nil
@@ -225,26 +260,6 @@ func (r *sqlRepo) GetChannelMessages(channelid int) (*domain.ChannelMessages, er
 	}
 
 	return &channelmessages, nil
-}
-
-func (r *sqlRepo) CreateNewChannel(channel *domain.Channel) error {
-	ctx, cancel := r.getContextWithTimeout(context.Background())
-	defer cancel()
-
-	tx := r.conn.WithContext(ctx)
-	querychannel := Channel{
-		Name:      channel.Name,
-		Desc:      channel.Desc,
-		Picture:   channel.Picture,
-		CreatedBy: channel.CreatedBy,
-	}
-
-	if err := tx.Model(&Channel{}).Create(&querychannel).Error; err != nil {
-		return err
-	}
-
-	channel.Id = querychannel.ID
-	return nil
 }
 
 func (r *sqlRepo) getContextWithTimeout(ctx context.Context) (context.Context, context.CancelFunc) {

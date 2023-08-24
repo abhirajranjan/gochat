@@ -1,6 +1,13 @@
 package ports
 
-import "gochat/internal/core/domain"
+import (
+	"errors"
+	"gochat/internal/core/domain"
+)
+
+var (
+	ChannelNotFound error = errors.New("channel not found")
+)
 
 type Repositories interface {
 	CreateNewChannel(*domain.Channel) error
@@ -8,7 +15,7 @@ type Repositories interface {
 
 	ValidChannel(channelid int) (bool, error)
 	UserJoinChannel(userid string, channelid int) error
-	UserinChannel(userid string, channelid int) (ok bool, err error)
+	ChannelCreatedByUser(userid string, channelid int) (ok bool, err error)
 	DeleteChannel(channelid int) error
 	PostMessageInChannel(channelid int, m *domain.Message) error
 
