@@ -7,8 +7,9 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func setInvalidToken(ctx *gin.Context) {
-	ctx.AbortWithError(http.StatusBadRequest, fmt.Errorf("%s", "invalid token"))
+func setInvalidToken(ctx *gin.Context, cause string) {
+	clientErrMessage(ctx, http.StatusUnauthorized, "token", fmt.Errorf("%s", cause))
+	ctx.Abort()
 }
 
 func setInternalServerError(ctx *gin.Context) {
@@ -20,7 +21,8 @@ func setBadRequest(ctx *gin.Context) {
 }
 
 func setBadReqWithClientErr(ctx *gin.Context, err error) {
-	clientErrMessage(ctx, http.StatusBadRequest, "DomainError", err)
+	clientErrMessage(ctx, http.StatusBadRequest, "domain", err)
+	ctx.Abort()
 }
 
 func setForbidden(ctx *gin.Context) {

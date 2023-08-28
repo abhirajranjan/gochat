@@ -26,7 +26,6 @@ func main() {
 	if err := parser.Load(&cfg, "config.yaml"); err != nil {
 		log.Fatal(err)
 	}
-	log.Printf("loaded config: %+v\n", cfg)
 
 	applogger := logger.NewLogger(cfg.Logger)
 	applogger.AddWriter(os.Stdout)

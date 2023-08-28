@@ -11,10 +11,10 @@ import (
 )
 
 func (h *handler) NewChannel(ctx *gin.Context) {
-	var newchanreq domain.NewChannelRequest
+	var newchanreq domain.ChannelRequest
 	userid := ctx.GetString(NAMETAGKEY)
 
-	if err := ctx.BindQuery(&newchanreq); err != nil {
+	if err := ctx.Bind(&newchanreq); err != nil {
 		h.logger.Debugf("ctx.Bind: %w", err)
 		setBadRequest(ctx)
 		return
@@ -94,21 +94,22 @@ func (h *handler) PostMessageInChannel(ctx *gin.Context) {
 		return
 	}
 
-	var message domain.Message
-	if err := ctx.BindJSON(&message); err != nil {
+	var msgreq domain.MessageRequest
+	if err := ctx.Bind(&msgreq); err != nil {
 		h.Debugf("ctx.Bind: %s", err)
 		return
 	}
 
-	if len(message.Content) == 0 {
-		h.Debugf("invalid credential provided %#v", message)
-		setBadRequest(ctx)
-		return
-	}
+	h.logger.Debugf("message: %#v", msgreq)
 
-	msg, err := h.service.PostMessageInChannel(userid, channelid, &message)
-	if err != nil {
-		h.Errorf("PostMessageInChannel: %s", err)
+	msg, err := h.service.NewMessageInChannel(userid, channelid, &msgreq)
+
+	var errdomain domain.ErrDomain
+	if errors.As(err, &errdomain) {
+		h.Debugf("service.PostMessageInChannel: %s", errdomain)
+		return
+	} else if err != nil {
+		h.Errorf("service.PostMessageInChannel: %s", err)
 		setInternalServerError(ctx)
 		return
 	}

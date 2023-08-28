@@ -19,13 +19,12 @@ type User struct {
 type UserChannels struct {
 	UserID    string `gorm:"not null"`
 	ChannelID int    `gorm:"not null"`
-	Channel   Channel
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
 
 type Messages struct {
-	ID        int    `gorm:"primarykey"`
+	ID        int    `gorm:"primarykey,auto increment"`
 	UserID    string `gorm:"not null"`
 	ChannelID int    `gorm:"not null"`
 	Content   []byte `gorm:"not null"`
@@ -42,23 +41,4 @@ type Channel struct {
 	Desc      string
 	CreatedAt time.Time
 	UpdatedAt time.Time
-}
-
-// helper struct
-
-type channelBanner struct {
-	Message_id         int
-	Message_content    []byte
-	Message_type       int
-	Message_created_at time.Time
-
-	Channel_id      int
-	Channel_name    string
-	Channel_picture string
-
-	User_family_name string
-	User_given_name  string
-	User_id          string
-	User_name_tag    string
-	User_picture     string
 }

@@ -1,6 +1,7 @@
 package sql
 
 import (
+	"context"
 	"gochat/config"
 	"gochat/internal/core/ports"
 
@@ -27,4 +28,8 @@ func NewSqlRepository(cfg config.SqlConfig, dialector gorm.Dialector, opts ...go
 		config: cfg,
 		conn:   conn,
 	}, nil
+}
+
+func (r *sqlRepo) getContextWithTimeout(ctx context.Context) (context.Context, context.CancelFunc) {
+	return context.WithTimeout(ctx, r.config.SqlTimeout)
 }

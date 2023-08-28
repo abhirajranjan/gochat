@@ -11,13 +11,14 @@ const USERID_SEP = "@"
 type Service interface {
 	HandleWS(*websocket.Conn) error
 
-	LoginRequest(domain.LoginRequest) (*domain.User, error)
+	NewUser(domain.LoginRequest) (*domain.User, error)
 	DeleteUser(userid string) error
+	VerifyUser(userid string) (error, bool)
 	GetUserMessages(userid string) ([]domain.ChannelBanner, error)
 
-	JoinChannel(userid string, channelid int) error
-	NewChannel(userid string, chanreq domain.NewChannelRequest) (*domain.Channel, error)
+	NewChannel(userid string, chanreq domain.ChannelRequest) (*domain.Channel, error)
 	DeleteChannel(userid string, channelid int) error
+	JoinChannel(userid string, channelid int) error
+	NewMessageInChannel(userid string, channelid int, message *domain.MessageRequest) (*domain.Message, error)
 	GetMessagesFromChannel(userid string, channelid int) (*domain.ChannelMessages, error)
-	PostMessageInChannel(userid string, channelid int, message *domain.Message) (*domain.Message, error)
 }

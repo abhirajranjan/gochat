@@ -22,11 +22,31 @@ func (h *handler) AuthMiddleware(ctx *gin.Context) {
 		return
 	}
 
-	if _, err := h.jwtParser.ParseWithClaims(jwtoken, &session, func(j *jwt.Token) (interface{}, error) {
+	_, err = h.jwtParser.ParseWithClaims(jwtoken, &session, func(j *jwt.Token) (interface{}, error) {
 		return h.getEncryptionKey(j.Method)
-	}); err != nil {
-		h.Debugf("jwtParser.ParseWithClaims: %w", err)
-		setInvalidToken(ctx)
+	})
+
+	if err != nil {
+		h.Debugf("jwtParser.ParseWithClaims: %s", err)
+		switch err {
+		case jwt.ErrTokenExpired:
+			setInvalidToken(ctx, "token expired")
+			break
+		default:
+			setInvalidToken(ctx, "invalid token")
+		}
+		return
+	}
+
+	err, ok := h.service.VerifyUser(session.Sub)
+	if err != nil {
+		h.logger.Debugf("service.VerifyUser: %s", err)
+		setInternalServerError(ctx)
+		return
+	}
+	if !ok {
+		h.logger.Debugf("service.VerifyUser: user does not exist")
+		setBadReqWithClientErr(ctx, errors.New("user does not exist"))
 		return
 	}
 

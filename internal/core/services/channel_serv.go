@@ -1,12 +1,25 @@
 package services
 
 import (
+	"context"
+	"fmt"
 	"gochat/internal/core/domain"
+	"gochat/internal/core/ports"
+	"unicode"
 
 	"github.com/pkg/errors"
 )
 
-func (s *service) NewChannel(userid string, chanreq domain.NewChannelRequest) (*domain.Channel, error) {
+func isPrintable(s string) bool {
+	for _, r := range s {
+		if !unicode.IsPrint(r) {
+			return false
+		}
+	}
+	return true
+}
+
+func (s *service) NewChannel(userid string, chanreq domain.ChannelRequest) (*domain.Channel, error) {
 	if chanreq.Name == "" || !isPrintable(chanreq.Name) {
 		return nil, domain.NewErrDomain("invalid name")
 	}
@@ -22,15 +35,31 @@ func (s *service) NewChannel(userid string, chanreq domain.NewChannelRequest) (*
 		CreatedBy: userid,
 	}
 
-	if err := s.repo.CreateNewChannel(&channel); err != nil {
+	ctx := context.Background()
+
+	if err := s.repo.NewChannel(ctx, &channel); err != nil {
 		return nil, errors.Wrap(err, "repo.CreateNewChannel")
+	}
+
+	if err := s.repo.UserJoinChannel(ctx, userid, channel.Id); err != nil {
+		return nil, errors.Wrap(err, "repo.UserJoinChannel")
+	}
+
+	if err := s.broadcastMessageToChannel(ctx, channel.Id, domain.BroadcastNewChannel); err != nil {
+		return nil, errors.Wrap(err, "broadcastMessageToChannel")
 	}
 
 	return &channel, nil
 }
 
 func (s *service) DeleteChannel(userid string, channelid int) error {
-	ok, err := s.repo.ChannelCreatedByUser(userid, channelid)
+	ctx := context.Background()
+
+	if err := s.isValidChannel(ctx, channelid); err != nil {
+		return errors.Wrap(err, "isValidChannel")
+	}
+
+	ok, err := s.repo.IsChannelCreatedByUser(ctx, userid, channelid)
 	if err != nil {
 		return errors.Wrap(err, "repo.UserinChannel")
 	}
@@ -38,28 +67,39 @@ func (s *service) DeleteChannel(userid string, channelid int) error {
 		return domain.NewErrDomain("permission denied")
 	}
 
-	if err := s.repo.DeleteChannel(channelid); err != nil {
+	if err := s.repo.DeleteUserChannelByChannelID(ctx, channelid); err != nil {
+		return errors.Wrap(err, "repo.DeleteUserChannelByChannelID")
+	}
+
+	if err := s.repo.DeleteChannel(ctx, channelid); err != nil {
 		return errors.Wrap(err, "repo.DeleteChannel")
 	}
+
+	go func(r ports.Repositories, channelid int) {
+		if err := r.DeleteMessagesByChannelID(ctx, channelid); err != nil {
+			fmt.Println(errors.Wrap(err, "DeleteMessagesByChannelID"))
+		}
+	}(s.repo, channelid)
 
 	return nil
 }
 
 func (s *service) JoinChannel(userid string, channelid int) error {
-	if err := isValidChannel(channelid, s.repo.ValidChannel); err != nil {
-		return err
+	ctx := context.Background()
+
+	if err := s.isValidChannel(ctx, channelid); err != nil {
+		return errors.Wrap(err, "isValidChannel")
 	}
 
-	// ok, err := s.repo.UserinChannel(userid, channelid)
-	// if err != nil {
-	// 	return errors.Wrap(err, "repo.UserinChannel")
-	// }
-	// if ok {
-	// 	// user already in channel
-	// 	return nil
-	// }
+	ok, err := s.repo.UserinChannel(ctx, userid, channelid)
+	if err != nil {
+		return errors.Wrap(err, "repo.UserinChannel")
+	}
+	if ok { // user already in channel
+		return nil
+	}
 
-	if err := s.repo.UserJoinChannel(userid, channelid); err != nil {
+	if err := s.repo.UserJoinChannel(ctx, userid, channelid); err != nil {
 		return errors.Wrap(err, "repo.UserJoinChannel")
 	}
 
@@ -67,19 +107,24 @@ func (s *service) JoinChannel(userid string, channelid int) error {
 }
 
 func (s *service) GetMessagesFromChannel(userid string, channelid int) (*domain.ChannelMessages, error) {
-	if err := isValidChannel(channelid, s.repo.ValidChannel); err != nil {
-		return nil, err
+	ctx := context.Background()
+
+	// checks for validity of channel
+	if err := s.isValidChannel(ctx, channelid); err != nil {
+		return nil, errors.Wrap(err, "isValidChannel")
 	}
 
-	// ok, err := s.repo.UserinChannel(userid, channelid)
-	// if err != nil {
-	// 	return nil, errors.Wrap(err, "repo.UserinChannel")
-	// }
-	// if !ok {
-	// 	return nil, ErrUserNotInChannel
-	// }
+	// checks if user in channel
+	ok, err := s.repo.UserinChannel(ctx, userid, channelid)
+	if err != nil {
+		return nil, errors.Wrap(err, "repo.UserinChannel")
+	}
+	if !ok {
+		return nil, domain.NewErrDomain("permission denied")
+	}
 
-	channelmsg, err := s.repo.GetChannelMessages(channelid)
+	// extract messages from channel
+	channelmsg, err := s.repo.GetChannelMessages(ctx, channelid)
 	if err != nil {
 		return nil, errors.Wrap(err, "repo.GetChannelMessages")
 	}
@@ -87,39 +132,56 @@ func (s *service) GetMessagesFromChannel(userid string, channelid int) (*domain.
 	return channelmsg, nil
 }
 
-func (s *service) PostMessageInChannel(userid string, channelid int, message *domain.Message) (*domain.Message, error) {
-	if err := isValidChannel(channelid, s.repo.ValidChannel); err != nil {
-		return nil, err
+func (s *service) NewMessageInChannel(userid string, channelid int, msgreq *domain.MessageRequest) (*domain.Message, error) {
+	ctx := context.Background()
+
+	if len(msgreq.Content) == 0 {
+		return nil, domain.NewErrDomain("message cannot be empty")
 	}
 
-	// ok, err := s.repo.UserinChannel(userid, channelid)
-	// if err != nil {
-	// 	return nil, errors.Wrap(err, "repo.UserinChannel")
-	// }
-	// if !ok {
-	// 	return nil, ErrUserNotInChannel
-	// }
-
-	if len(message.Content) == 0 {
-		return nil, ErrCannotBeEmpty("message")
+	message := domain.Message{
+		User: domain.UserProfile{
+			ID: userid,
+		},
+		Type:    msgreq.Type,
+		Content: msgreq.Content,
 	}
 
-	message.User = domain.UserProfile{ID: userid}
+	ok, err := s.repo.UserinChannel(ctx, userid, channelid)
+	if err != nil {
+		return nil, errors.Wrap(err, "repo.UserinChannel")
+	}
+	if !ok {
+		return nil, domain.NewErrDomain("permission denied")
+	}
 
-	if err := s.repo.PostMessageInChannel(channelid, message); err != nil {
+	if err := s.repo.PostMessageInChannel(ctx, channelid, &message); err != nil {
 		return nil, errors.Wrap(err, "PostMessageInChannel")
 	}
 
-	return message, nil
+	return &message, nil
 }
 
-func isValidChannel(channelid int, validChannel func(channelid int) (bool, error)) error {
-	ok, err := validChannel(channelid)
+func (s *service) broadcastMessageToChannel(ctx context.Context,
+	channelid int, m domain.MessageBroadcastType) error {
+
+	message := domain.Message{
+		Type:    m.Type,
+		Content: m.Content,
+	}
+	if err := s.repo.PostMessageInChannel(ctx, channelid, &message); err != nil {
+		return errors.Wrap(err, "repo.PostMessageInChannel")
+	}
+	return nil
+}
+
+func (s *service) isValidChannel(ctx context.Context, channelid int) error {
+	ok, err := s.repo.ValidChannel(ctx, channelid)
 	if err != nil {
-		return errors.Wrap(err, "validChannel")
+		return errors.Wrap(err, "repo.ValidChannel")
 	}
 	if !ok {
-		return ErrChannelNotFound
+		return domain.NewErrDomain("channel does not exist")
 	}
 
 	return nil

@@ -3,7 +3,7 @@ app:
     addr: localhost:1212
 sql:
     # dsn remote connection url
-    dsn: "test.db"
+    dsn: "user=admin password=password dbname=gochat host=localhost port=5432"
     # max sql query execution time  
     sqltimeout: 5s
 jwt:

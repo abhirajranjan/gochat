@@ -13,10 +13,15 @@ type LoginRequest struct {
 }
 
 // new channel request model
-type NewChannelRequest struct {
+type ChannelRequest struct {
 	Name    string `json:"name" form:"name"`
 	Picture string `json:"picture" form:"picture"`
 	Desc    string `json:"desc" form:"desc"`
+}
+
+type MessageRequest struct {
+	Type    MessageType `json:"type" form:"type"`
+	Content []byte      `json:",string" form:"content"`
 }
 
 // user model
@@ -39,13 +44,24 @@ type User struct {
 }
 
 // channel models
+type MessageBroadcastType struct {
+	Content []byte
+	Type    MessageType
+}
+
+var (
+	BroadcastNewChannel MessageBroadcastType = MessageBroadcastType{
+		Content: []byte("new channel created"),
+		Type:    -1,
+	}
+)
 
 type MessageType int
 
 const (
-	MessageTypeImage = iota + 1
-	MessageTypeSticker
-	MessageTypeText
+	MessageTypeImage   MessageType = 1
+	MessageTypeSticker MessageType = 2
+	MessageTypeText    MessageType = 3
 )
 
 type Message struct {

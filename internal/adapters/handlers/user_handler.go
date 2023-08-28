@@ -16,23 +16,21 @@ func (h *handler) HandleGoogleAuth(ctx *gin.Context) {
 	)
 
 	if err := ctx.Bind(&cred); err != nil {
-		h.Debugf("ctx.Bind, %w", err)
+		h.Debugf("ctx.Bind, %s", err)
+		setBadReqWithClientErr(ctx, errors.Errorf("no token"))
 		return
 	}
 
-	if cred.Token == "" {
-		setInvalidToken(ctx)
-		return
-	}
-
-	h.Debugf("HandleGoogleAuth %s", cred.Token)
+	h.Debugf("HandleGoogleAuth: %s", cred.Token)
 
 	_, _, err := h.parseUnverified(cred.GetToken(), &claims)
 	if err != nil {
 		h.Debugf("jwtParser: %w", err)
-		setInvalidToken(ctx)
+		setInvalidToken(ctx, "invalid token")
 		return
 	}
+
+	h.Debugf("claims: %#v", claims)
 
 	loginRequest = domain.LoginRequest{
 		Email:       claims.Email,
@@ -43,20 +41,22 @@ func (h *handler) HandleGoogleAuth(ctx *gin.Context) {
 		Sub:         claims.Sub,
 	}
 
-	user, err := h.service.LoginRequest(loginRequest)
+	user, err := h.service.NewUser(loginRequest)
 	var errdomain domain.ErrDomain
-	if errors.Is(err, &errdomain) {
-		setBadReqWithClientErr(ctx, errdomain)
+	if errors.As(err, &errdomain) {
+		h.Debugf("service.LoginRequest: %s", err)
+		// setBadReqWithClientErr(ctx, errdomain)
+		setBadRequest(ctx)
 		return
 	} else if err != nil {
-		h.Errorf("service.LoginRequest: %w", err)
+		h.Errorf("service.LoginRequest: %s", err)
 		setInternalServerError(ctx)
 		return
 	}
 
 	jwt, err := h.generateSessionJwt(user)
 	if err != nil {
-		h.Errorf("token.SignedString: %w", err)
+		h.Errorf("token.SignedString: %s", err)
 		setInternalServerError(ctx)
 		return
 	}
@@ -68,6 +68,7 @@ func (h *handler) HandleGoogleAuth(ctx *gin.Context) {
 // returns recent user messages
 func (h *handler) GetUserMessages(ctx *gin.Context) {
 	userid := ctx.GetString(NAMETAGKEY)
+	h.logger.Debugf("[%s] called GetUserMessages", userid)
 
 	channelbanner, err := h.service.GetUserMessages(userid)
 	if err != nil {
@@ -76,6 +77,7 @@ func (h *handler) GetUserMessages(ctx *gin.Context) {
 		return
 	}
 
+	h.logger.Debugf("res: %#v", channelbanner)
 	ctx.JSON(http.StatusOK, channelbanner)
 }
 
@@ -83,7 +85,7 @@ func (h *handler) DeleteUser(ctx *gin.Context) {
 	userid := ctx.GetString(NAMETAGKEY)
 
 	if err := h.service.DeleteUser(userid); err != nil {
-		h.Errorf("service.DeleteUser: %w", err)
+		h.Errorf("service.DeleteUser: %s", err)
 		setInternalServerError(ctx)
 		return
 	}
