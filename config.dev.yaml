@@ -9,11 +9,11 @@ sql:
 jwt:
     # jwt hashing key
     key: abhirajranjan
-    # jet expiry time
+    # jwt expiry time
     expiry: 5h
 logger:
     # appname for logger
-    appname: test
+    appname: gochat-dev
     # level of logging: debug, info, warn, error, dpanic, panic, fatal
     level: debug
     # if true then developer encoder else production encoder 

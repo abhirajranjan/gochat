@@ -1,7 +1,12 @@
-FROM postgres
+FROM golang:1.21 AS builder
 
-ENV POSTGRES_PASSWORD=password
-ENV POSTGRES_USER=admin
-ENV POSTGRES_DB=gochat
+WORKDIR /app
+COPY go.mod .
+COPY go.sum .
+RUN go mod download -x
+COPY . .
+RUN CGO_ENABLED=0 GOOS=linux go build -o /app/bin/gochat
 
-EXPOSE 5432
+FROM scratch
+COPY --from=builder /app/bin/gochat /
+CMD [ "/gochat" ]

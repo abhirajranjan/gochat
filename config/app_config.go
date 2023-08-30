@@ -1,5 +1,6 @@
 package config
 
 type AppConfig struct {
-	Addr string `json:"addr"`
+	Addr string `config:"APP_ADDR"`
+	Port string `config:"APP_PORT"`
 }

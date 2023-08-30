@@ -23,9 +23,11 @@ func main() {
 		Sql    config.SqlConfig
 		Jwt    config.JwtConfig
 	}
-	if err := parser.Load(&cfg, "config.yaml"); err != nil {
+	if err := parser.Load(&cfg); err != nil {
 		log.Fatal(err)
 	}
+
+	log.Printf("cfg: %#v", cfg)
 
 	applogger := logger.NewLogger(cfg.Logger)
 	applogger.AddWriter(os.Stdout)
@@ -33,7 +35,7 @@ func main() {
 
 	repo, err := postgres.NewPostgresRepository(cfg.Sql)
 	if err != nil {
-		applogger.Panic(err)
+		// applogger.Panic(err)
 	}
 
 	service := services.NewService(repo)

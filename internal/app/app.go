@@ -25,7 +25,7 @@ func NewServer(config config.AppConfig, srvhandler ports.Handler) *ginServer {
 		engine:  ginRouter,
 
 		httpServer: &http.Server{
-			Addr:    config.Addr,
+			Addr:    config.Addr + ":" + config.Port,
 			Handler: ginRouter,
 		},
 	}

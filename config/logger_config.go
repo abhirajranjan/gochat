@@ -1,8 +1,8 @@
 package config
 
 type LoggerConfig struct {
-	AppName string `mapstructure:"appName"`
-	Level   string `mapstructure:"level"`
-	Dev     bool   `mapstructure:"devMode"`
-	Encoder string `mapstructure:"encoder"`
+	Name    string `config:"APP_NAME"`
+	Level   string `config:"LOGGER_LEVEL"`
+	Isdev   bool   `config:"LOGGER_ISDEV"`
+	Encoder string `config:"LOGGER_ENCODER"`
 }

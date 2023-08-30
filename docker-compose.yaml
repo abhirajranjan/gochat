@@ -1,0 +1,44 @@
+version: '2'
+services:
+  web:
+    build: .
+    ports:
+      - "1212:1212"
+    links:
+      - postgres
+    volumes:
+      - .:/var/www/html
+    # depends_on:
+    #   - postgres
+    environment:
+      # appname for logger
+      APP_NAME: "gochat-dev"
+      # addr for server
+      APP_ADDR: "localhost"
+      # port for server
+      APP_PORT: 80
+      # dsn remote connection url
+      SQL_DSN: "user=admin password=password dbname=gochat host=postgres port=5432"
+      # max sql query execution time
+      SQL_TIMEOUT: "5s"
+      # jwt hashing key
+      JWT_KEY: "abhirajranjan"
+      # jwt expiry time
+      JWT_EXPIRY: "5h"
+      # level of logging: debug, info, warn, error, dpanic, panic, fatal
+      LOGGER_LEVEL: "debug"
+      # if true then developer encoder else production encoder 
+      LOGGER_ISDEV: true
+      # writer format: console, json 
+      LOGGER_ENCODER: "console"
+
+  postgres:
+    image: "postgres"
+    volumes:
+    - /private/var/lib/postgresql:/var/lib/postgresql
+    ports:
+      - "5432:5432"
+    environment: 
+      POSTGRES_PASSWORD: "password"
+      POSTGRES_USER: "admin"
+      POSTGRES_DB: "gochat"
