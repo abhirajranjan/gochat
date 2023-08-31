@@ -9,47 +9,38 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/gorilla/mux"
 )
 
-type ginServer struct {
-	handler    ports.Handler
-	engine     *gin.Engine
-	httpServer *http.Server
-}
-
-func NewServer(config config.AppConfig, srvhandler ports.Handler) *ginServer {
-	ginRouter := gin.New()
-	server := ginServer{
-		handler: srvhandler,
-		engine:  ginRouter,
-
-		httpServer: &http.Server{
-			Addr:    config.Addr + ":" + config.Port,
-			Handler: ginRouter,
-		},
+// create a new server
+func NewServer(cfg config.AppConfig, srvhandler ports.Handler) *http.Server {
+	router := mux.NewRouter()
+	server := http.Server{
+		Addr:    cfg.Addr + ":" + cfg.Port,
+		Handler: router,
 	}
 
-	initUserRoute(ginRouter, server.handler)
-	initMessageRoute(ginRouter, server.handler)
+	initUserRoute(router, srvhandler)
+	initMessageRoute(router, srvhandler)
+	initwebSocket(router, srvhandler)
 
 	return &server
 }
 
-func (s *ginServer) Start() {
+func Start(server *http.Server) {
 	go func() {
 		// always returns non nil error
-		if err := s.httpServer.ListenAndServe(); err != http.ErrServerClosed {
-			log.Fatal(fmt.Errorf("server listen: %w", err))
+		if err := server.ListenAndServe(); err != http.ErrServerClosed {
+			log.Fatal(fmt.Errorf("server listen: %s", err))
 		}
 	}()
 }
 
-func (s *ginServer) Stop(ctx context.Context) {
+func Stop(server *http.Server, ctx context.Context) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	if err := s.httpServer.Shutdown(ctx); err != nil {
+	if err := server.Shutdown(ctx); err != nil {
 		log.Println("server listen", err)
 	}
 }

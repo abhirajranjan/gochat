@@ -1,57 +1,73 @@
 package handlers
 
 import (
-	"gochat/internal/core/domain"
-	"strings"
+	"net/http"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/gorilla/sessions"
 	"github.com/pkg/errors"
+
+	"gochat/internal/core/domain"
 )
 
 // injects user information from jwt to context
-func (h *handler) AuthMiddleware(ctx *gin.Context) {
-	// TODO: token expired
-	var session domain.SessionJwtModel
+func (h *handler) AuthMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var (
+			jwtoken    string
+			session    *sessions.Session
+			sessionjwt domain.SessionJwtModel
+		)
 
-	jwtoken, err := extractTokenFromCtx(ctx)
-	if err != nil {
-		h.Debugf("extractTokenFromCtx: %w", err)
-		setForbidden(ctx)
-		return
-	}
-
-	_, err = h.jwtParser.ParseWithClaims(jwtoken, &session, func(j *jwt.Token) (interface{}, error) {
-		return h.getEncryptionKey(j.Method)
-	})
-
-	if err != nil {
-		h.Debugf("jwtParser.ParseWithClaims: %s", err)
-		switch err {
-		case jwt.ErrTokenExpired:
-			setInvalidToken(ctx, "token expired")
-			break
-		default:
-			setInvalidToken(ctx, "invalid token")
+		// get the session data
+		session, err := h.store.Get(r, "session")
+		if err != nil {
+			http.Error(w, "", http.StatusBadRequest)
 		}
-		return
-	}
 
-	err, ok := h.service.VerifyUser(session.Sub)
-	if err != nil {
-		h.logger.Debugf("service.VerifyUser: %s", err)
-		setInternalServerError(ctx)
-		return
-	}
-	if !ok {
-		h.logger.Debugf("service.VerifyUser: user does not exist")
-		setBadReqWithClientErr(ctx, errors.New("user does not exist"))
-		return
-	}
+		IJWTtoken, ok := session.Values["token"]
+		if !ok {
+			http.Error(w, "", http.StatusBadRequest)
+		}
 
-	ctx.Set(NAMETAGKEY, session.Sub)
-	ctx.Next()
+		if jwtoken, ok = IJWTtoken.(string); !ok {
+			http.Error(w, "", http.StatusBadRequest)
+		}
+
+		_, err = h.jwtParser.ParseWithClaims(jwtoken,
+			&sessionjwt,
+			func(j *jwt.Token) (interface{}, error) {
+				return h.getEncryptionKey(j.Method)
+			})
+
+		if err != nil {
+			h.Debugf("jwtParser.ParseWithClaims: %s", err)
+			switch err {
+			case jwt.ErrTokenExpired:
+				http.Error(w, "token expired", http.StatusUnauthorized)
+				break
+			default:
+				http.Error(w, "invalid token", http.StatusUnauthorized)
+			}
+			return
+		}
+
+		err, ok = h.service.VerifyUser(sessionjwt.Sub)
+		if err != nil {
+			h.logger.Debugf("service.VerifyUser: %s", err)
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+		if !ok {
+			h.logger.Debugf("service.VerifyUser: user does not exist")
+			http.Error(w, "user does not exists", http.StatusBadRequest)
+			return
+		}
+
+		session.Values[ID_KEY] = sessionjwt.Sub
+		next.ServeHTTP(w, r)
+	})
 }
 
 func (h *handler) parseUnverified(String string, claims jwt.Claims) (token *jwt.Token, parts []string, err error) {
@@ -91,19 +107,4 @@ func (h *handler) getEncryptionKey(method jwt.SigningMethod) (interface{}, error
 	}
 	// no algorithm matched
 	return nil, errors.New("wrong algorithm")
-}
-
-func extractTokenFromCtx(ctx *gin.Context) (id string, err error) {
-	// header based token extraction
-	token := ctx.Request.Header.Get("Authorization")
-	b, id, ok := strings.Cut(token, "Bearer ")
-	if !ok {
-		return "", errors.New("No authorization header found")
-	}
-
-	if b != "" {
-		return "", errors.New("Bearer token mismatched")
-	}
-
-	return id, nil
 }

@@ -42,12 +42,12 @@ func main() {
 	handler := handlers.NewHandler(cfg.Jwt, service, applogger)
 	server := app.NewServer(cfg.App, handler)
 
-	server.Start()
+	app.Start(server)
 
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
 	sig := <-sigs
 	applogger.Infof("stopping server: %s", sig)
-	server.Stop(context.Background())
+	app.Stop(server, context.Background())
 }

@@ -1,32 +1,37 @@
 package ports
 
-import "github.com/gin-gonic/gin"
+import (
+	"net/http"
+)
+
+type handlerfunc func(http.ResponseWriter, *http.Request)
+type middlewarefunc func(http.Handler) http.Handler
 
 type Handler interface {
 	// handle login via google response data
-	HandleGoogleAuth(*gin.Context)
+	HandleGoogleAuth() handlerfunc
 	// retrives recent user messages
-	GetUserMessages(*gin.Context)
+	GetUserMessages() handlerfunc
 	// Delete User
-	DeleteUser(*gin.Context)
+	DeleteUser() handlerfunc
 
 	// Create New Channel
-	NewChannel(*gin.Context)
+	NewChannel() handlerfunc
 
 	// all below have channelid as parameter
 	//
 	// get messages from channel
-	GetMessagesFromChannel(*gin.Context)
+	GetMessagesFromChannel() handlerfunc
 	// post a message to channel
-	PostMessageInChannel(*gin.Context)
+	PostMessageInChannel() handlerfunc
 	// User join channel
-	JoinChannel(*gin.Context)
+	JoinChannel() handlerfunc
 	// Delete Channel
-	DeleteChannel(*gin.Context)
+	DeleteChannel() handlerfunc
 
 	// injects user data in context if present else returns http.Unauthorised
-	AuthMiddleware(*gin.Context)
+	AuthMiddleware() middlewarefunc
 
 	// upgrade connection to websocket
-	HandleWS(*gin.Context)
+	HandleWS() handlerfunc
 }

@@ -3,17 +3,17 @@ package app
 import (
 	"gochat/internal/core/ports"
 
-	"github.com/gin-gonic/gin"
+	"github.com/gorilla/mux"
 )
 
 // init /messages endpoint
-func initMessageRoute(router *gin.Engine, handler ports.Handler) {
-	router.GET("/ws", handler.AuthMiddleware, handler.HandleWS)
+func initMessageRoute(router *mux.Router, handler ports.Handler) {
+	channelrouter := router.PathPrefix("/channel").Subrouter()
+	channelrouter.Use(mux.MiddlewareFunc(handler.AuthMiddleware()))
 
-	channel := router.Group("/channel", handler.AuthMiddleware)
-	channel.POST("", handler.NewChannel)
-	channel.GET("/:channelid", handler.GetMessagesFromChannel)
-	channel.POST("/:channelid/message", handler.PostMessageInChannel)
-	channel.POST("/:channelid/join", handler.JoinChannel)
-	channel.DELETE("/:channelid", handler.DeleteChannel)
+	channelrouter.HandleFunc("", handler.NewChannel())
+	channelrouter.HandleFunc("/:channelid", handler.GetMessagesFromChannel())
+	channelrouter.HandleFunc("/:channelid/message", handler.PostMessageInChannel())
+	channelrouter.HandleFunc("/:channelid/join", handler.JoinChannel())
+	channelrouter.HandleFunc("/:channelid", handler.DeleteChannel())
 }

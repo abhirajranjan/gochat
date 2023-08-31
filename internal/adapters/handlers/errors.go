@@ -1,42 +1,22 @@
 package handlers
 
 import (
-	"fmt"
 	"net/http"
-
-	"github.com/gin-gonic/gin"
 )
 
-func setInvalidToken(ctx *gin.Context, cause string) {
-	clientErrMessage(ctx, http.StatusUnauthorized, "token", fmt.Errorf("%s", cause))
-	ctx.Abort()
+func setClientBadRequest(w http.ResponseWriter, err string) {
+	clientErrMessage(w, http.StatusBadRequest, "domain", err)
 }
 
-func setInternalServerError(ctx *gin.Context) {
-	ctx.AbortWithStatus(http.StatusInternalServerError)
-}
-
-func setBadRequest(ctx *gin.Context) {
-	ctx.AbortWithStatus(http.StatusBadRequest)
-}
-
-func setBadReqWithClientErr(ctx *gin.Context, err error) {
-	clientErrMessage(ctx, http.StatusBadRequest, "domain", err)
-	ctx.Abort()
-}
-
-func setForbidden(ctx *gin.Context) {
-	ctx.AbortWithStatus(http.StatusForbidden)
-}
-
-type errResp struct {
+type jsonReponse struct {
 	Type  string `json:"type"`
 	Error string `json:"error"`
 }
 
-func clientErrMessage(ctx *gin.Context, resp int, errtype string, err error) {
-	ctx.JSON(resp, errResp{
+func clientErrMessage(w http.ResponseWriter, statusCode int, errtype string, msg string) error {
+	model := jsonReponse{
 		Type:  errtype,
-		Error: err.Error(),
-	})
+		Error: msg,
+	}
+	return setResponseJSON(w, statusCode, model)
 }

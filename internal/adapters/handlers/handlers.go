@@ -2,13 +2,14 @@ package handlers
 
 import (
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/gorilla/sessions"
 	"github.com/gorilla/websocket"
 
 	"gochat/config"
 	"gochat/internal/core/ports"
 )
 
-const NAMETAGKEY = "NAMETAG"
+const ID_KEY = "NAMETAG"
 const JWT_ISSUER = "connector/auth"
 
 type logger interface {
@@ -23,8 +24,8 @@ type handler struct {
 
 	wsUpgrader *websocket.Upgrader
 	jwtParser  *jwt.Parser
-
-	config config.JwtConfig
+	store      sessions.Store
+	config     config.JwtConfig
 }
 
 // handler implements ports.Handler
