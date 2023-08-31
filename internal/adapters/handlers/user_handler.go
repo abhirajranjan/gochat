@@ -46,7 +46,7 @@ func (h *handler) HandleGoogleAuth() http.HandlerFunc {
 		var errdomain domain.ErrDomain
 		if errors.As(err, &errdomain) {
 			h.Debugf("service.LoginRequest: %s", err)
-			// setBadReqWithClientErr(ctx, errdomain)
+			h.logger.Debugf("")
 			setBadRequest(ctx)
 			return
 		} else if err != nil {
