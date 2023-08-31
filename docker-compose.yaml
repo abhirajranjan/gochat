@@ -1,3 +1,4 @@
+# sample docker compose file
 version: '2'
 services:
   web:
