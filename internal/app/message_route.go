@@ -9,11 +9,11 @@ import (
 // init /messages endpoint
 func initMessageRoute(router *mux.Router, handler ports.Handler) {
 	channelrouter := router.PathPrefix("/channel").Subrouter()
-	channelrouter.Use(mux.MiddlewareFunc(handler.AuthMiddleware()))
+	channelrouter.Use(handler.AuthMiddleware())
 
-	channelrouter.HandleFunc("", handler.NewChannel())
-	channelrouter.HandleFunc("/:channelid", handler.GetMessagesFromChannel())
-	channelrouter.HandleFunc("/:channelid/message", handler.PostMessageInChannel())
-	channelrouter.HandleFunc("/:channelid/join", handler.JoinChannel())
-	channelrouter.HandleFunc("/:channelid", handler.DeleteChannel())
+	channelrouter.Handle("", handler.NewChannel())
+	channelrouter.Handle("/{channelid}", handler.GetMessagesFromChannel())
+	channelrouter.Handle("/{channelid}/message", handler.PostMessageInChannel())
+	channelrouter.Handle("/{channelid}/join", handler.JoinChannel())
+	channelrouter.Handle("/{channelid}", handler.DeleteChannel())
 }

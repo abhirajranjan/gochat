@@ -46,7 +46,7 @@ func (h *handler) NewChannel() http.Handler {
 	})
 }
 
-func (h *handler) DeleteChannel() http.HandlerFunc {
+func (h *handler) DeleteChannel() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var (
 			userid string
@@ -83,7 +83,7 @@ func (h *handler) DeleteChannel() http.HandlerFunc {
 }
 
 // extract messages from channels
-func (h *handler) GetMessagesFromChannel() http.HandlerFunc {
+func (h *handler) GetMessagesFromChannel() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		userid, err := getUserID(h.store, r)
 		if err != nil {
@@ -112,7 +112,7 @@ func (h *handler) GetMessagesFromChannel() http.HandlerFunc {
 }
 
 // post a new message to channel
-func (h *handler) PostMessageInChannel() http.HandlerFunc {
+func (h *handler) PostMessageInChannel() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		userid, err := getUserID(h.store, r)
 		if err != nil {
@@ -153,7 +153,7 @@ func (h *handler) PostMessageInChannel() http.HandlerFunc {
 	})
 }
 
-func (h *handler) JoinChannel() http.HandlerFunc {
+func (h *handler) JoinChannel() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 		userid, err := getUserID(h.store, r)

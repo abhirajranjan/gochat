@@ -7,11 +7,11 @@ import (
 )
 
 func initUserRoute(router *mux.Router, handler ports.Handler) {
-	router.HandleFunc("/user", handler.HandleGoogleAuth())
+	router.Handle("/user", handler.HandleGoogleAuth())
 
 	userRouter := router.PathPrefix("/user").Subrouter()
-	userRouter.Use(mux.MiddlewareFunc(handler.AuthMiddleware()))
+	userRouter.Use(handler.AuthMiddleware())
 
-	userRouter.HandleFunc("/user/messages", handler.GetUserMessages())
-	userRouter.HandleFunc("/user", handler.DeleteUser())
+	userRouter.Handle("/user/messages", handler.GetUserMessages())
+	userRouter.Handle("/user", handler.DeleteUser())
 }

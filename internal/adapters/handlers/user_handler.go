@@ -4,11 +4,10 @@ import (
 	"gochat/internal/core/domain"
 	"net/http"
 
-	"github.com/gin-gonic/gin"
 	"github.com/pkg/errors"
 )
 
-func (h *handler) HandleGoogleAuth() http.HandlerFunc {
+func (h *handler) HandleGoogleAuth() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var (
 			cred         Credential
@@ -46,51 +45,63 @@ func (h *handler) HandleGoogleAuth() http.HandlerFunc {
 		var errdomain domain.ErrDomain
 		if errors.As(err, &errdomain) {
 			h.Debugf("service.LoginRequest: %s", err)
-			h.logger.Debugf("")
-			setBadRequest(ctx)
+			http.Error(w, "", http.StatusBadRequest)
 			return
 		} else if err != nil {
 			h.Errorf("service.LoginRequest: %s", err)
-			setInternalServerError(ctx)
+			http.Error(w, "", http.StatusInternalServerError)
 			return
 		}
 
 		jwt, err := h.generateSessionJwt(user)
 		if err != nil {
 			h.Errorf("token.SignedString: %s", err)
-			setInternalServerError(ctx)
+			http.Error(w, "", http.StatusInternalServerError)
 			return
 		}
 
-		ctx.JSON(http.StatusOK, jwt)
+		setResponseJSON(w, http.StatusOK, jwt)
 		h.Debugf("response jwt: %s", jwt)
 	})
 }
 
 // returns recent user messages
-func (h *handler) GetUserMessages(ctx *gin.Context) {
-	userid := ctx.GetString(NAMETAGKEY)
-	h.logger.Debugf("[%s] called GetUserMessages", userid)
+func (h *handler) GetUserMessages() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		userid, err := getUserID(h.store, r)
+		if err != nil {
+			h.Errorf("GetUserMessages: userid not found")
+			http.Error(w, "", http.StatusInternalServerError)
+			return
+		}
 
-	channelbanner, err := h.service.GetUserMessages(userid)
-	if err != nil {
-		h.Errorf("GetUserMessages: service.GetUserMessages: ", err)
-		setInternalServerError(ctx)
-		return
-	}
+		channelbanner, err := h.service.GetUserMessages(userid)
+		if err != nil {
+			h.Errorf("GetUserMessages: service.GetUserMessages: ", err)
+			http.Error(w, "", http.StatusInternalServerError)
+			return
+		}
 
-	h.logger.Debugf("res: %#v", channelbanner)
-	ctx.JSON(http.StatusOK, channelbanner)
+		h.logger.Debugf("res: %#v", channelbanner)
+		setResponseJSON(w, http.StatusOK, channelbanner)
+	})
 }
 
-func (h *handler) DeleteUser(ctx *gin.Context) {
-	userid := ctx.GetString(NAMETAGKEY)
+func (h *handler) DeleteUser() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		userid, err := getUserID(h.store, r)
+		if err != nil {
+			h.Errorf("DeleteUser: getUserID: %s", err)
+			http.Error(w, "", http.StatusInternalServerError)
+			return
+		}
 
-	if err := h.service.DeleteUser(userid); err != nil {
-		h.Errorf("service.DeleteUser: %s", err)
-		setInternalServerError(ctx)
-		return
-	}
+		if err := h.service.DeleteUser(userid); err != nil {
+			h.Errorf("service.DeleteUser: %s", err)
+			http.Error(w, "", http.StatusInternalServerError)
+			return
+		}
 
-	ctx.Status(http.StatusOK)
+		w.WriteHeader(http.StatusOK)
+	})
 }

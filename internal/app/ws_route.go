@@ -8,5 +8,6 @@ import (
 
 func initwebSocket(router *mux.Router, handler ports.Handler) {
 	wsRouter := router.PathPrefix("/ws").Subrouter()
-	wsRouter.HandleFunc("", handler.HandleWS())
+	wsRouter.Use(handler.AuthMiddleware())
+	wsRouter.Handle("", handler.HandleWS())
 }

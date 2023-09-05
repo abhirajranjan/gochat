@@ -11,8 +11,12 @@ import (
 	"gochat/internal/core/domain"
 )
 
+func (h *handler) AuthMiddleware() func(next http.Handler) http.Handler {
+	return h.authMiddleware
+}
+
 // injects user information from jwt to context
-func (h *handler) AuthMiddleware(next http.Handler) http.Handler {
+func (h *handler) authMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var (
 			jwtoken    string

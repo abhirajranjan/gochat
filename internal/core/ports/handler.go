@@ -4,34 +4,31 @@ import (
 	"net/http"
 )
 
-type handlerfunc func(http.ResponseWriter, *http.Request)
-type middlewarefunc func(http.Handler) http.Handler
-
 type Handler interface {
 	// handle login via google response data
-	HandleGoogleAuth() handlerfunc
+	HandleGoogleAuth() http.Handler
 	// retrives recent user messages
-	GetUserMessages() handlerfunc
+	GetUserMessages() http.Handler
 	// Delete User
-	DeleteUser() handlerfunc
+	DeleteUser() http.Handler
 
 	// Create New Channel
-	NewChannel() handlerfunc
+	NewChannel() http.Handler
 
 	// all below have channelid as parameter
 	//
 	// get messages from channel
-	GetMessagesFromChannel() handlerfunc
+	GetMessagesFromChannel() http.Handler
 	// post a message to channel
-	PostMessageInChannel() handlerfunc
+	PostMessageInChannel() http.Handler
 	// User join channel
-	JoinChannel() handlerfunc
+	JoinChannel() http.Handler
 	// Delete Channel
-	DeleteChannel() handlerfunc
+	DeleteChannel() http.Handler
 
 	// injects user data in context if present else returns http.Unauthorised
-	AuthMiddleware() middlewarefunc
+	AuthMiddleware() func(http.Handler) http.Handler
 
 	// upgrade connection to websocket
-	HandleWS() handlerfunc
+	HandleWS() http.Handler
 }
