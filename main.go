@@ -2,10 +2,11 @@ package main
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"gochat/config"
 	"gochat/config/parser"
@@ -16,30 +17,31 @@ import (
 	"gochat/logger"
 )
 
+type centralcfg struct {
+	Logger config.LoggerConfig
+	App    config.AppConfig
+	Sql    config.SqlConfig
+	Jwt    config.JwtConfig
+}
+
 func main() {
-	var cfg struct {
-		Logger config.LoggerConfig
-		App    config.AppConfig
-		Sql    config.SqlConfig
-		Jwt    config.JwtConfig
-	}
+	cfg := defaultCfg()
+	logger.AddTextLogger()
+
 	if err := parser.Load(&cfg); err != nil {
-		log.Fatal(err)
+		slog.Warn("parser.Load", "error", err)
 	}
 
-	log.Printf("cfg: %#v", cfg)
-
-	applogger := logger.NewLogger(cfg.Logger)
-	applogger.AddWriter(os.Stdout)
-	applogger.InitLogger()
+	slog.Debug("config loaded", slog.Any("cfg", cfg))
 
 	repo, err := postgres.NewPostgresRepository(cfg.Sql)
 	if err != nil {
-		// applogger.Panic(err)
+		slog.Error("postgres.NewPostgresRepository", "error", err)
+		return
 	}
 
 	service := services.NewService(repo)
-	handler := handlers.NewHandler(cfg.Jwt, service, applogger)
+	handler := handlers.NewHandler(cfg.Jwt, service)
 	server := app.NewServer(cfg.App, handler)
 
 	app.Start(server)
@@ -48,6 +50,28 @@ func main() {
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
 	sig := <-sigs
-	applogger.Infof("stopping server: %s", sig)
+	slog.Info("stopping server: %s", sig)
 	app.Stop(server, context.Background())
+}
+
+func defaultCfg() centralcfg {
+	return centralcfg{
+		Logger: config.LoggerConfig{
+			Name:    "gochat-dev",
+			Level:   "debug",
+			Isdev:   true,
+			Encoder: "console",
+		},
+		App: config.AppConfig{
+			Addr: "localhost",
+			Port: "80",
+		},
+		Sql: config.SqlConfig{
+			SqlTimeout: 5 * time.Second,
+		},
+		Jwt: config.JwtConfig{
+			Key:    "test",
+			Expiry: 4 * time.Hour,
+		},
+	}
 }

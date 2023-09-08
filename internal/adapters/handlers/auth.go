@@ -1,11 +1,12 @@
 package handlers
 
 import (
+	"context"
+	"log/slog"
 	"net/http"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/gorilla/sessions"
 	"github.com/pkg/errors"
 
 	"gochat/internal/core/domain"
@@ -20,33 +21,16 @@ func (h *handler) authMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var (
 			jwtoken    string
-			session    *sessions.Session
 			sessionjwt domain.SessionJwtModel
 		)
 
-		// get the session data
-		session, err := h.store.Get(r, "session")
-		if err != nil {
-			http.Error(w, "", http.StatusBadRequest)
-		}
-
-		IJWTtoken, ok := session.Values["token"]
-		if !ok {
-			http.Error(w, "", http.StatusBadRequest)
-		}
-
-		if jwtoken, ok = IJWTtoken.(string); !ok {
-			http.Error(w, "", http.StatusBadRequest)
-		}
-
-		_, err = h.jwtParser.ParseWithClaims(jwtoken,
-			&sessionjwt,
-			func(j *jwt.Token) (interface{}, error) {
-				return h.getEncryptionKey(j.Method)
-			})
+		jwtoken = getTokenFromReq(r)
+		_, err := h.jwtParser.ParseWithClaims(jwtoken, &sessionjwt, func(j *jwt.Token) (interface{}, error) {
+			return h.getEncryptionKey(j.Method)
+		})
 
 		if err != nil {
-			h.Debugf("jwtParser.ParseWithClaims: %s", err)
+			slog.Error("ParseWithClaims", slog.String("error", err.Error()))
 			switch err {
 			case jwt.ErrTokenExpired:
 				http.Error(w, "token expired", http.StatusUnauthorized)
@@ -57,20 +41,24 @@ func (h *handler) authMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		err, ok = h.service.VerifyUser(sessionjwt.Sub)
+		slog.Debug("jwttoken", jwtoken)
+
+		err, ok := h.service.VerifyUser(sessionjwt.Sub)
 		if err != nil {
-			h.logger.Debugf("service.VerifyUser: %s", err)
+			slog.Error("service.VerifyUser", slog.String("error", err.Error()))
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
 		}
 		if !ok {
-			h.logger.Debugf("service.VerifyUser: user does not exist")
+			slog.Error("service.VerifyUser: user does not exist")
 			http.Error(w, "user does not exists", http.StatusBadRequest)
 			return
 		}
 
-		session.Values[ID_KEY] = sessionjwt.Sub
-		next.ServeHTTP(w, r)
+		slog.Debug("auth successful")
+
+		ctx := context.WithValue(r.Context(), ID_KEY, sessionjwt.Sub)
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 

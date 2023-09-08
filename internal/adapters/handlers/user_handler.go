@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"gochat/internal/core/domain"
+	"log/slog"
 	"net/http"
 
 	"github.com/pkg/errors"
@@ -16,21 +17,20 @@ func (h *handler) HandleGoogleAuth() http.Handler {
 		)
 
 		if err := bindReader(&cred, r.Body, 100000); err != nil {
-			h.Debugf("HandleGoogleAuth: bindReader, %s", err)
+			slog.Error("HandleGoogleAuth: bindReader, %s", err)
 			http.Error(w, "no token", http.StatusBadRequest)
 			return
 		}
 
-		h.Debugf("HandleGoogleAuth: %s", cred.Token)
+		slog.Debug("HandleGoogleAuth: %s", cred.Token)
 
-		_, _, err := h.parseUnverified(cred.GetToken(), &claims)
-		if err != nil {
-			h.Debugf("jwtParser: %w", err)
+		if _, _, err := h.parseUnverified(cred.GetToken(), &claims); err != nil {
+			slog.Error("jwtParser: %w", err)
 			http.Error(w, "invalid token", http.StatusBadRequest)
 			return
 		}
 
-		h.Debugf("claims: %#v", claims)
+		slog.Debug("claims: %#v", claims)
 
 		loginRequest = domain.LoginRequest{
 			Email:       claims.Email,
@@ -42,62 +42,71 @@ func (h *handler) HandleGoogleAuth() http.Handler {
 		}
 
 		user, err := h.service.NewUser(loginRequest)
+
 		var errdomain domain.ErrDomain
 		if errors.As(err, &errdomain) {
-			h.Debugf("service.LoginRequest: %s", err)
+			slog.Error("service.LoginRequest: %s", err)
 			http.Error(w, "", http.StatusBadRequest)
 			return
-		} else if err != nil {
-			h.Errorf("service.LoginRequest: %s", err)
+		}
+
+		if err != nil {
+			slog.Error("service.LoginRequest: %s", err)
 			http.Error(w, "", http.StatusInternalServerError)
 			return
 		}
 
 		jwt, err := h.generateSessionJwt(user)
 		if err != nil {
-			h.Errorf("token.SignedString: %s", err)
+			slog.Error("token.SignedString: %s", err)
 			http.Error(w, "", http.StatusInternalServerError)
 			return
 		}
 
 		setResponseJSON(w, http.StatusOK, jwt)
-		h.Debugf("response jwt: %s", jwt)
 	})
 }
 
 // returns recent user messages
 func (h *handler) GetUserMessages() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		userid, err := getUserID(h.store, r)
-		if err != nil {
-			h.Errorf("GetUserMessages: userid not found")
+		var (
+			userid string
+			err    error
+		)
+
+		if userid, err = getUserID(r.Context()); err != nil {
+			slog.Error("GetUserMessages: userid not found")
 			http.Error(w, "", http.StatusInternalServerError)
 			return
 		}
 
 		channelbanner, err := h.service.GetUserMessages(userid)
 		if err != nil {
-			h.Errorf("GetUserMessages: service.GetUserMessages: ", err)
+			slog.Error("GetUserMessages: service.GetUserMessages: ", err)
 			http.Error(w, "", http.StatusInternalServerError)
 			return
 		}
 
-		h.logger.Debugf("res: %#v", channelbanner)
 		setResponseJSON(w, http.StatusOK, channelbanner)
 	})
 }
 
 func (h *handler) DeleteUser() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		userid, err := getUserID(h.store, r)
-		if err != nil {
-			h.Errorf("DeleteUser: getUserID: %s", err)
+		var (
+			userid string
+			err    error
+		)
+
+		if userid, err = getUserID(r.Context()); err != nil {
+			slog.Error("DeleteUser: getUserID: %s", err)
 			http.Error(w, "", http.StatusInternalServerError)
 			return
 		}
 
 		if err := h.service.DeleteUser(userid); err != nil {
-			h.Errorf("service.DeleteUser: %s", err)
+			slog.Error("service.DeleteUser: %s", err)
 			http.Error(w, "", http.StatusInternalServerError)
 			return
 		}

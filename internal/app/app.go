@@ -6,6 +6,7 @@ import (
 	"gochat/config"
 	"gochat/internal/core/ports"
 	"log"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -29,6 +30,7 @@ func NewServer(cfg config.AppConfig, srvhandler ports.Handler) *http.Server {
 
 func Start(server *http.Server) {
 	go func() {
+		slog.Info("server started", "addr", server.Addr)
 		// always returns non nil error
 		if err := server.ListenAndServe(); err != http.ErrServerClosed {
 			log.Fatal(fmt.Errorf("server listen: %s", err))

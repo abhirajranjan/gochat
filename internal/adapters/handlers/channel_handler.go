@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"log/slog"
 	"net/http"
 
 	"github.com/pkg/errors"
@@ -16,28 +17,30 @@ func (h *handler) NewChannel() http.Handler {
 			err        error
 		)
 
-		if userid, err = getUserID(h.store, r); err != nil {
-			h.logger.Debugf("NewChannel: getUserID: %s", err)
+		if userid, err = getUserID(r.Context()); err != nil {
+			slog.Error("NewChannel: getUserID: %s", err)
 			http.Error(w, "", http.StatusBadRequest)
 			return
 		}
 
 		if err := bindReader(&newChanReq, r.Body, 100000); err != nil {
-			h.logger.Debugf("NewChannel: decodeReader: %s", err)
+			slog.Error("NewChannel: decodeReader: %s", err)
 			http.Error(w, "", http.StatusBadRequest)
 			return
 		}
 
-		h.logger.Debugf("query: %v", newChanReq)
+		slog.Debug("query: %v", newChanReq)
 
 		channel, err := h.service.NewChannel(userid, newChanReq)
 		var errdomain domain.ErrDomain
 		if errors.As(err, &errdomain) {
-			h.logger.Debugf("service.NewChannel: %s", err)
+			slog.Error("service.NewChannel: %s", err)
 			setClientBadRequest(w, errdomain.Reason())
 			return
-		} else if err != nil {
-			h.logger.Errorf("service.NewChannel: %s", err)
+		}
+
+		if err != nil {
+			slog.Error("service.NewChannel: %s", err)
 			http.Error(w, "", http.StatusInternalServerError)
 			return
 		}
@@ -53,56 +56,66 @@ func (h *handler) DeleteChannel() http.Handler {
 			err    error
 		)
 
-		if userid, err = getUserID(h.store, r); err != nil {
-			h.logger.Debugf("DeleteUser: getUserID: %s", err)
+		if userid, err = getUserID(r.Context()); err != nil {
+			slog.Error("DeleteUser: getUserID: %s", err)
 			http.Error(w, "", http.StatusBadRequest)
 			return
 		}
 
 		channelid, err := getChannelId(r)
 		if err != nil {
-			h.Debugf("DeleteUser: extractChannelId: %s", err)
+			slog.Error("DeleteUser: extractChannelId: %s", err)
 			http.Error(w, "", http.StatusBadRequest)
 			return
 		}
 
+		slog.Debug("delete Channelid", channelid)
+
 		err = h.service.DeleteChannel(userid, channelid)
 		var errdomain domain.ErrDomain
 		if errors.As(err, &errdomain) {
-			h.Debugf("service.DeleteChannel: %s", err)
+			slog.Error("service.DeleteChannel: %s", err)
 			setClientBadRequest(w, errdomain.Reason())
 			return
-		} else if err != nil {
-			h.Errorf("service.DeleteChannel: %s", err)
+		}
+
+		if err != nil {
+			slog.Error("service.DeleteChannel: %s", err)
 			http.Error(w, "", http.StatusInternalServerError)
 			return
 		}
 
-		http.StatusText(http.StatusOK)
+		w.WriteHeader(http.StatusOK)
 	})
 }
 
 // extract messages from channels
 func (h *handler) GetMessagesFromChannel() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		userid, err := getUserID(h.store, r)
-		if err != nil {
-			h.logger.Debugf("GetMessagesFromChannel: getUserID: %s", err)
+		var (
+			userid    string
+			channelid int
+			err       error
+		)
+
+		if userid, err = getUserID(r.Context()); err != nil {
+			slog.Debug("GetMessagesFromChannel: getUserID: %s", err)
 			http.Error(w, "", http.StatusBadRequest)
 			return
 		}
 
-		channelid, err := getChannelId(r)
-		if err != nil {
-			h.Debugf("GetMessagesFromChannel: extractChannelId: %s", err)
+		if channelid, err = getChannelId(r); err != nil {
+			slog.Debug("GetMessagesFromChannel: extractChannelId: %s", err)
 			http.Error(w, "", http.StatusBadRequest)
 			return
 
 		}
+
+		slog.Debug("GetMessagesFromChannel", "channelid", channelid, "userid", userid)
 
 		channelMessages, err := h.service.GetMessagesFromChannel(userid, channelid)
 		if err != nil {
-			h.Errorf("GetMessagesFromChannel: %s", err)
+			slog.Error("GetMessagesFromChannel: %s", err)
 			http.Error(w, "", http.StatusInternalServerError)
 			return
 		}
@@ -114,37 +127,43 @@ func (h *handler) GetMessagesFromChannel() http.Handler {
 // post a new message to channel
 func (h *handler) PostMessageInChannel() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		userid, err := getUserID(h.store, r)
-		if err != nil {
-			h.logger.Debugf("PostMessageInChannel: getUserID: %s", err)
+		var (
+			userid    string
+			channelid int
+			err       error
+		)
+
+		if userid, err = getUserID(r.Context()); err != nil {
+			slog.Error("PostMessageInChannel: getUserID: %s", err)
 			http.Error(w, "", http.StatusBadRequest)
 			return
 		}
 
-		channelid, err := getChannelId(r)
-		if err != nil {
-			h.Debugf("PostMessageInChannel: getChannelId: %s", err)
+		if channelid, err = getChannelId(r); err != nil {
+			slog.Error("PostMessageInChannel: getChannelId: %s", err)
 			http.Error(w, "", http.StatusBadRequest)
 			return
 		}
 
 		var msgreq domain.MessageRequest
 		if err := bindReader(&msgreq, r.Body, 100000); err != nil {
-			h.Debugf("PostMessageInChannel: decodeReader: %s", err)
+			slog.Error("PostMessageInChannel: decodeReader: %s", err)
 			http.Error(w, "", http.StatusBadRequest)
 			return
 		}
 
-		h.logger.Debugf("message: %#v", msgreq)
+		slog.Debug("message: %#v", msgreq)
 		msg, err := h.service.NewMessageInChannel(userid, channelid, &msgreq)
 
 		var errdomain domain.ErrDomain
 		if errors.As(err, &errdomain) {
-			h.Debugf("PostMessageInChannel: service.PostMessageInChannel: %s", errdomain)
+			slog.Error("PostMessageInChannel: service.PostMessageInChannel: %s", errdomain)
 			http.Error(w, errdomain.Reason(), http.StatusBadRequest)
 			return
-		} else if err != nil {
-			h.Errorf("PostMessageInChannel: service.PostMessageInChannel: %s", err)
+		}
+
+		if err != nil {
+			slog.Error("PostMessageInChannel: service.PostMessageInChannel: %s", err)
 			http.Error(w, "", http.StatusInternalServerError)
 			return
 		}
@@ -155,33 +174,38 @@ func (h *handler) PostMessageInChannel() http.Handler {
 
 func (h *handler) JoinChannel() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
-		userid, err := getUserID(h.store, r)
-		if err != nil {
-			h.logger.Debugf("JoinChannel: getUserID: %s", err)
+		var (
+			userid    string
+			channelid int
+			err       error
+		)
+		if userid, err = getUserID(r.Context()); err != nil {
+			slog.Error("JoinChannel: getUserID: %s", err)
 			http.Error(w, "", http.StatusBadRequest)
 			return
 		}
 
-		channelid, err := getChannelId(r)
-		if err != nil {
-			h.Debugf("JoinChannel: getChannelId: %s", err)
+		if channelid, err = getChannelId(r); err != nil {
+			slog.Error("JoinChannel: getChannelId: %s", err)
 			http.Error(w, "", http.StatusBadRequest)
 			return
 		}
 
 		err = h.service.JoinChannel(userid, channelid)
+
 		var errdomain domain.ErrDomain
 		if errors.Is(err, &errdomain) {
-			h.logger.Debug("JoinChannel: service.JoinChannel: %s", errdomain)
+			slog.Error("JoinChannel: service.JoinChannel: %s", errdomain)
 			http.Error(w, errdomain.Reason(), http.StatusBadRequest)
 			return
-		} else if err != nil {
-			h.Errorf("JoinChannel: service.JoinChannel: %s", err)
+		}
+
+		if err != nil {
+			slog.Error("JoinChannel: service.JoinChannel: %s", err)
 			http.Error(w, "", http.StatusInternalServerError)
 			return
 		}
 
-		http.StatusText(http.StatusOK)
+		w.WriteHeader(http.StatusOK)
 	})
 }

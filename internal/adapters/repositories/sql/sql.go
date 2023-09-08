@@ -22,8 +22,6 @@ func NewSqlRepository(cfg config.SqlConfig, dialector gorm.Dialector, opts ...go
 	}
 
 	conn.AutoMigrate(&User{}, &UserChannels{}, &Messages{}, &Channel{})
-	conn.Migrator().CreateTable(&User{}, &UserChannels{}, &Messages{}, &Channel{})
-
 	return &sqlRepo{
 		config: cfg,
 		conn:   conn,

@@ -1,13 +1,13 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
 	"strconv"
 
 	"github.com/gorilla/mux"
-	"github.com/gorilla/sessions"
 	"github.com/pkg/errors"
 )
 
@@ -26,18 +26,12 @@ func setResponseJSON(w http.ResponseWriter, statusCode int, v any) error {
 	return json.NewEncoder(w).Encode(v)
 }
 
-func getUserID(store sessions.Store, r *http.Request) (string, error) {
-	IUserID, err := getKeyFromStore(store, r)
-	if err != nil {
-		return "", errors.Wrap(err, "getKeyFromStore")
+func getUserID(ctx context.Context) (string, error) {
+	if userid, ok := ctx.Value(ID_KEY).(string); ok {
+		return userid, nil
 	}
 
-	userid, ok := IUserID.(string)
-	if !ok {
-		return userid, errors.Errorf("session (%#v) not string type", IUserID)
-	}
-
-	return userid, nil
+	return "", errors.New("no userid found")
 }
 
 func getChannelId(r *http.Request) (int, error) {
@@ -53,16 +47,29 @@ func getChannelId(r *http.Request) (int, error) {
 	return channelid, nil
 }
 
-func getKeyFromStore(store sessions.Store, r *http.Request) (interface{}, error) {
-	session, err := store.Get(r, "session")
-	if err != nil {
-		return nil, errors.Wrap(err, "store.Get")
+// func getKeyFromStore(store sessions.Store, r *http.Request) (interface{}, error) {
+// 	session, err := store.Get(r, "session")
+// 	if err != nil {
+// 		return nil, errors.Wrap(err, "store.Get")
+// 	}
+
+// 	IUserID, ok := session.Values[ID_KEY]
+// 	if !ok {
+// 		return nil, errors.New("session does not contain ID_KEY")
+// 	}
+
+// 	return IUserID, nil
+// }
+
+func getTokenFromReq(r *http.Request) string {
+	return getFromReq("token", r)
+}
+
+func getFromReq(name string, r *http.Request) string {
+	c, err := r.Cookie(name)
+	if err == http.ErrNoCookie {
+		return ""
 	}
 
-	IUserID, ok := session.Values[ID_KEY]
-	if !ok {
-		return nil, errors.New("session does not contain ID_KEY")
-	}
-
-	return IUserID, nil
+	return c.Value
 }
