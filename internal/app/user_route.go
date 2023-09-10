@@ -12,6 +12,6 @@ func initUserRoute(router *mux.Router, handler ports.Handler) {
 	userRouter := router.PathPrefix("/user").Subrouter()
 	userRouter.Use(handler.AuthMiddleware())
 
-	userRouter.Handle("/user/messages", handler.GetUserMessages())
-	userRouter.Handle("/user", handler.DeleteUser())
+	userRouter.Handle("/messages", handler.GetUserMessages())
+	userRouter.Handle("", handler.DeleteUser())
 }

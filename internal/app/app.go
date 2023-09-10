@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"gochat/config"
 	"gochat/internal/core/ports"
+	"gochat/logger"
 	"log"
 	"log/slog"
 	"net/http"
@@ -20,6 +21,7 @@ func NewServer(cfg config.AppConfig, srvhandler ports.Handler) *http.Server {
 		Addr:    cfg.Addr + ":" + cfg.Port,
 		Handler: router,
 	}
+	router.Use(logger.RouterPathLogger)
 
 	initUserRoute(router, srvhandler)
 	initMessageRoute(router, srvhandler)

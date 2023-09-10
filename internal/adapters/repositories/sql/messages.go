@@ -57,15 +57,16 @@ func (r *sqlRepo) PostMessageInChannel(ctx context.Context, channelid int, m *do
 		return errors.Wrap(err, "tx.Create")
 	}
 
+	m.Id = message.ID
 	return nil
 }
 
 func (r *sqlRepo) GetChannelMessages(ctx context.Context, channelid int) (*domain.ChannelMessages, error) {
 	var (
 		chanmessages   domain.ChannelMessages
-		messageuser    map[string]domain.UserProfile
 		domainmessages []domain.Message
 		messages       []Messages
+		messageuser    = map[string]domain.UserProfile{}
 		cond           = Messages{
 			ChannelID: channelid,
 		}

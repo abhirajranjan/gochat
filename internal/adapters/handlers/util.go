@@ -47,20 +47,6 @@ func getChannelId(r *http.Request) (int, error) {
 	return channelid, nil
 }
 
-// func getKeyFromStore(store sessions.Store, r *http.Request) (interface{}, error) {
-// 	session, err := store.Get(r, "session")
-// 	if err != nil {
-// 		return nil, errors.Wrap(err, "store.Get")
-// 	}
-
-// 	IUserID, ok := session.Values[ID_KEY]
-// 	if !ok {
-// 		return nil, errors.New("session does not contain ID_KEY")
-// 	}
-
-// 	return IUserID, nil
-// }
-
 func getTokenFromReq(r *http.Request) string {
 	return getFromReq("token", r)
 }

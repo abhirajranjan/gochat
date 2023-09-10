@@ -63,8 +63,8 @@ func defaultCfg() centralcfg {
 			Encoder: "console",
 		},
 		App: config.AppConfig{
-			Addr: "localhost",
-			Port: "80",
+			Addr: "0.0.0.0",
+			Port: "1212",
 		},
 		Sql: config.SqlConfig{
 			SqlTimeout: 5 * time.Second,

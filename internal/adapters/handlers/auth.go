@@ -25,6 +25,8 @@ func (h *handler) authMiddleware(next http.Handler) http.Handler {
 		)
 
 		jwtoken = getTokenFromReq(r)
+
+		slog.Debug("token extracted from req", "token", jwtoken)
 		_, err := h.jwtParser.ParseWithClaims(jwtoken, &sessionjwt, func(j *jwt.Token) (interface{}, error) {
 			return h.getEncryptionKey(j.Method)
 		})
