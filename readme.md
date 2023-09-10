@@ -6,11 +6,9 @@ just another messaging application supporting text, sticker and binary data.
 
 ## features
 
-- [x] text/sticker/binary messages retrival
-- [x] system messages
-- [x] group channels
-- [ ] realtime websocket messaging
-- [ ] call / meetings
+* text/sticker/binary messages retrival
+* system messages
+* group channels
 
 ## Usage
 
@@ -31,3 +29,10 @@ endpoints:
 | POST   | <http://localhost:1212/channel/:id>      | post message in channel               |
 | POST   | <http://localhost:1212/channel/:id/join> | join a channel                        |
 | DELETE | <http://localhost:1212/channel/:id>      | delete a channel                      |
+
+## Contribute
+
+- [ ] channel join approval from channel creator
+- [ ] channel roles ie admin
+- [ ] realtime websocket messaging
+- [ ] call / meetings
