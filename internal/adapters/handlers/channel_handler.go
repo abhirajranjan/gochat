@@ -114,6 +114,12 @@ func (h *handler) GetMessagesFromChannel() http.Handler {
 		slog.Debug("GetMessagesFromChannel", "channelid", channelid, "userid", userid)
 
 		channelMessages, err := h.service.GetMessagesFromChannel(userid, channelid)
+		var domainerr domain.ErrDomain
+		if errors.As(err, &domainerr) {
+			slog.Error("GetMessagesFromChannel: %s", err)
+			http.Error(w, domainerr.Reason(), http.StatusBadRequest)
+			return
+		}
 		if err != nil {
 			slog.Error("GetMessagesFromChannel: %s", err)
 			http.Error(w, "", http.StatusInternalServerError)

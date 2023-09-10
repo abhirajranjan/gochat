@@ -11,9 +11,9 @@ func initMessageRoute(router *mux.Router, handler ports.Handler) {
 	channelrouter := router.PathPrefix("/channel").Subrouter()
 	channelrouter.Use(handler.AuthMiddleware())
 
-	channelrouter.Handle("", handler.NewChannel())
-	channelrouter.Handle("/{channelid}", handler.GetMessagesFromChannel())
-	channelrouter.Handle("/{channelid}/message", handler.PostMessageInChannel())
-	channelrouter.Handle("/{channelid}/join", handler.JoinChannel())
-	channelrouter.Handle("/{channelid}", handler.DeleteChannel())
+	channelrouter.Handle("/{channelid}/message", handler.PostMessageInChannel()).Methods("POST")
+	channelrouter.Handle("/{channelid}/join", handler.JoinChannel()).Methods("POST")
+	channelrouter.Handle("/{channelid}", handler.GetMessagesFromChannel()).Methods("GET")
+	channelrouter.Handle("/{channelid}", handler.DeleteChannel()).Methods("DELETE")
+	channelrouter.Handle("", handler.NewChannel()).Methods("POST")
 }
